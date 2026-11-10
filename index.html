@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Chezz – Chess vs 50 Bot Levels</title>
+<meta name="description" content="Play chess against 50 bot levels with real clocks, and climb the city, state, country and world leaderboards.">
+<meta name="theme-color" content="#16181d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Crect width=%27100%27 height=%27100%27 rx=%2722%27 fill=%27%234fd1a5%27/%3E%3Ctext x=%2750%27 y=%2772%27 font-size=%2762%27 text-anchor=%27middle%27%3E%E2%99%9E%3C/text%3E%3C/svg%3E">
+<style>
+:root{--bg:#16181d;--card:#21242b;--card2:#2a2e36;--line:#363b45;--tx:#eef1f5;--mut:#9aa3b2;--ac:#4fd1a5;--ac2:#2fa37e;--warn:#ffb84d;--bad:#ff6b6b;--light:#e6ecf2;--dark:#5f81a3;--bs:min(94vw,560px,max(300px,calc(100dvh - 340px)))}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center}
+button{font:inherit;color:inherit;cursor:pointer;border:0}
+.top{width:100%;max-width:640px;display:flex;align-items:center;justify-content:space-between;padding:10px 14px 6px}
+.logo{font-weight:800;font-size:18px;letter-spacing:.2px;display:flex;gap:8px;align-items:center}
+.logo b{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--ac);color:#0b2a20;font-size:17px}
+.tabs{display:flex;gap:4px;background:var(--card);padding:3px;border-radius:12px}
+.tabs button{background:transparent;padding:7px 12px;border-radius:9px;font-size:14px;color:var(--mut);font-weight:600}
+.tabs button.on{background:var(--card2);color:var(--tx)}
+main{width:100%;max-width:640px;padding:0 12px 28px}
+.view{display:none}.view.on{display:block}
+.bar{display:flex;align-items:center;justify-content:space-between;width:var(--bs);margin:6px auto;min-height:34px;gap:8px}
+.who{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;min-width:0}
+.av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--card2);font-size:15px;flex:none}
+.who small{color:var(--mut);font-weight:500}
+.cap{font-size:15px;letter-spacing:-2px;color:var(--mut);white-space:nowrap;overflow:hidden}
+.cap i{font-style:normal;font-size:12px;letter-spacing:0;margin-left:6px;color:var(--ac)}
+#board{width:var(--bs);height:var(--bs);margin:0 auto;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);border-radius:8px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,.45);user-select:none;touch-action:manipulation}
+.sq{position:relative;display:grid;place-items:center;font-size:calc(var(--bs)/8*.8);line-height:1;cursor:pointer}
+.sq.l{background:var(--light)}.sq.d{background:var(--dark)}
+.sq.last::before{content:"";position:absolute;inset:0;background:rgba(255,214,10,.42)}
+.sq.sel::before{content:"";position:absolute;inset:0;background:rgba(79,209,165,.6)}
+.sq.chk::before{content:"";position:absolute;inset:0;background:radial-gradient(circle,rgba(255,60,60,.9) 0,rgba(255,60,60,.0) 72%)}
+.sq.hint::before{content:"";position:absolute;inset:0;background:rgba(80,160,255,.55)}
+.sq.mv::after{content:"";position:absolute;width:30%;height:30%;border-radius:50%;background:rgba(20,30,40,.32)}
+.sq.cp::after{content:"";position:absolute;inset:6%;border-radius:50%;border:calc(var(--bs)/8*.07) solid rgba(20,30,40,.32);background:none;width:auto;height:auto}
+.pc{position:relative;z-index:1;font-family:"Segoe UI Symbol","Noto Sans Symbols 2","Apple Symbols",serif;pointer-events:none}
+.pc.w{color:#fff;text-shadow:0 0 1px #000,0 0 1px #000,0 1px 2px rgba(0,0,0,.8),1px 0 0 #222,-1px 0 0 #222,0 -1px 0 #222,0 1px 0 #222}
+.pc.b{color:#14161a;text-shadow:0 0 1px rgba(255,255,255,.4),0 1px 1px rgba(255,255,255,.25)}
+.co{position:absolute;font-size:calc(var(--bs)/8*.17);font-weight:700;z-index:2;pointer-events:none;opacity:.8}
+.sq.l .co{color:var(--dark)}.sq.d .co{color:var(--light)}
+.co.r{top:3%;left:5%}.co.f{bottom:2%;right:5%}
+#status{width:var(--bs);margin:8px auto 4px;min-height:24px;text-align:center;font-weight:700;font-size:15px}
+#status.think{color:var(--warn)}#status.over{color:var(--ac)}
+.acts{width:var(--bs);margin:6px auto;display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.btn{background:var(--card2);padding:10px 4px;border-radius:11px;font-size:13px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:2px}
+.btn span{font-size:17px}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.pri{background:var(--ac);color:#06261c}
+#moves{width:var(--bs);margin:8px auto 0;color:var(--mut);font-size:13px;line-height:1.7;max-height:56px;overflow:auto;background:var(--card);border-radius:10px;padding:6px 10px}
+#moves b{color:var(--tx);font-weight:600}
+.modal{position:fixed;inset:0;background:rgba(5,7,10,.72);display:none;align-items:center;justify-content:center;padding:14px;z-index:50}
+.modal.on{display:flex}
+.sheet{background:var(--card);border-radius:18px;padding:18px;width:100%;max-width:440px;max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.sheet h2{margin:0 0 4px;font-size:21px}.sheet p{margin:4px 0 12px;color:var(--mut);font-size:14px}
+.lv{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:10px 0}
+.lc{background:var(--card2);border:2px solid transparent;border-radius:13px;padding:9px 10px;text-align:left;display:flex;gap:9px;align-items:center}
+.lc.on{border-color:var(--ac);background:#233a34}
+.lc .n{font-size:22px;font-weight:800;width:30px;color:var(--ac)}
+.lc .t{font-size:13px;font-weight:700;line-height:1.2}
+.lc .t small{display:block;color:var(--mut);font-weight:500;font-size:11px;margin-top:2px}
+.dots{display:inline-flex;gap:2px;margin-top:3px}.dots i{width:5px;height:5px;border-radius:50%;background:#444b57}.dots i.f{background:var(--ac)}
+.seg{display:flex;gap:6px;margin:8px 0 14px}
+.seg button{flex:1;background:var(--card2);padding:10px;border-radius:11px;font-weight:600;border:2px solid transparent}
+.seg button.on{border-color:var(--ac);background:#233a34}
+.big{width:100%;padding:14px;border-radius:13px;background:var(--ac);color:#06261c;font-weight:800;font-size:16px}
+.ghost{width:100%;padding:12px;border-radius:12px;background:var(--card2);font-weight:600;margin-top:8px}
+.promo{display:flex;gap:10px;justify-content:center;margin:14px 0}
+.promo button{width:64px;height:64px;border-radius:14px;background:var(--card2);font-size:40px;display:grid;place-items:center}
+.card{background:var(--card);border-radius:16px;padding:14px;margin:10px 0}
+.card h3{margin:0 0 8px;font-size:16px}
+label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px;font-weight:600}
+input{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--tx);border-radius:10px;padding:11px;font:inherit;font-size:15px}
+input:focus{outline:2px solid var(--ac);border-color:transparent}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
+.stat{background:var(--card2);border-radius:12px;padding:10px 4px;text-align:center}
+.stat b{display:block;font-size:20px}.stat small{color:var(--mut);font-size:11px}
+.scopes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
+.scopes button{background:var(--card);padding:9px 2px;border-radius:11px;font-size:13px;font-weight:700;color:var(--mut)}
+.scopes button.on{background:var(--ac);color:#06261c}
+.lb{list-style:none;margin:0;padding:0}
+.lb li{display:grid;grid-template-columns:36px 1fr auto;gap:10px;align-items:center;padding:10px;background:var(--card);border-radius:12px;margin-bottom:6px}
+.lb li.me{outline:2px solid var(--ac)}
+.rk{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--card2);font-weight:800;font-size:14px}
+.rk.g1{background:#f4c542;color:#3a2c00}.rk.g2{background:#c3cad4;color:#222}.rk.g3{background:#d08b52;color:#2e1800}
+.nm{font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub{color:var(--mut);font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pts{text-align:right;font-weight:800;color:var(--ac);font-size:17px}.pts small{display:block;color:var(--mut);font-size:11px;font-weight:500}
+.note{color:var(--mut);font-size:13px;text-align:center;margin:14px 8px}
+.empty{text-align:center;color:var(--mut);padding:26px 10px;background:var(--card);border-radius:14px}
+.badge{display:inline-block;background:var(--card2);color:var(--warn);font-size:11px;font-weight:700;border-radius:20px;padding:2px 8px;margin-left:6px}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--warn);border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+.clk{font-variant-numeric:tabular-nums;font-weight:800;font-size:19px;background:var(--card);padding:4px 10px;border-radius:9px;min-width:74px;text-align:center;color:var(--mut)}
+.clk.run{background:var(--card2);color:var(--tx)}.clk.low{background:#4a2327;color:#ff8d8d}.clk.none{opacity:.5}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px}
+.chips button{background:var(--card2);padding:8px 11px;border-radius:10px;font-weight:700;font-size:13px;border:2px solid transparent}
+.chips button.on{border-color:var(--ac);background:#233a34}
+.tiers{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:8px 0}
+.tiers button{background:var(--card2);padding:7px 2px;border-radius:10px;font-size:11px;font-weight:700;color:var(--mut);border:2px solid transparent;line-height:1.25}
+.tiers button.on{border-color:var(--ac);color:var(--tx);background:#233a34}.tiers button span{display:block;font-size:16px}
+.sq.drag{opacity:.35}
+#ghost{position:fixed;z-index:80;pointer-events:none;font-size:calc(var(--bs)/8*.95);transform:translate(-50%,-55%);font-family:"Segoe UI Symbol","Noto Sans Symbols 2","Apple Symbols",serif}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+#board.shake{animation:shake .25s}
+.flag{display:inline-block;font-size:11px;font-weight:800;border-radius:20px;padding:2px 8px;margin-left:6px;vertical-align:1px}
+.flag.r{background:#1f3b33;color:var(--ac)}.flag.c{background:#3a3220;color:var(--warn)}
+.btn.arm{background:var(--bad);color:#fff}
+.acts{grid-template-columns:repeat(6,1fr)}
+.big2{width:100%;padding:12px;border-radius:12px;background:var(--card2);font-weight:700;margin-top:8px}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#0e1013;border:1px solid var(--line);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;z-index:90;max-width:92vw;text-align:center}
+.resume{background:#233a34;border:1px solid var(--ac);border-radius:14px;padding:12px;margin:10px 0;display:none;text-align:center;font-weight:600}
+.resume button{margin:8px 4px 0;padding:9px 16px;border-radius:10px;background:var(--ac);color:#06261c;font-weight:800}
+.resume button.g{background:var(--card2);color:var(--tx)}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><b>♞</b>Chezz</div>
+  <div class="tabs" role="tablist">
+    <button class="on" data-v="play">Play</button>
+    <button data-v="rank">Rankings</button>
+    <button data-v="me">Profile</button>
+  </div>
+</div>
+<main>
+  <section id="v-play" class="view on">
+    <div class="resume" id="resume"></div>
+    <div class="bar"><div class="who"><span class="av" id="botAv">🤖</span><span id="botName">Bot</span></div><div class="cap" id="capTop"></div><div class="clk none" id="clkTop">--:--</div></div>
+    <div id="board" aria-label="Chess board"></div>
+    <div class="bar"><div class="who"><span class="av">🙂</span><span id="meName">You</span><span id="rankFlag"></span></div><div class="cap" id="capBot"></div><div class="clk none" id="clkBot">--:--</div></div>
+    <div id="status">Choose a level to start</div>
+    <div class="acts">
+      <button class="btn pri" id="bNew"><span>＋</span>New</button>
+      <button class="btn" id="bUndo"><span>↶</span>Undo</button>
+      <button class="btn" id="bHint"><span>💡</span>Hint</button>
+      <button class="btn" id="bDraw"><span>½</span>Draw</button>
+      <button class="btn" id="bFlip"><span>⇅</span>Flip</button>
+      <button class="btn" id="bRes"><span>⚑</span>Resign</button>
+    </div>
+    <div id="moves">Moves will appear here.</div>
+    <div class="note">Win = Level × 10 points · Draw = Level × 4. Ranked games are re-played and verified by the server. Undo and Hint make a game unranked. <a href="#" id="mute" style="color:var(--ac)">Sound: on</a></div>
+  </section>
+  <section id="v-rank" class="view">
+    <div class="scopes" id="scopes">
+      <button data-s="city" class="on">My City</button>
+      <button data-s="state">My State</button>
+      <button data-s="country">Country</button>
+      <button data-s="world">Worldwide</button>
+    </div>
+    <div id="lbHead" class="note" style="margin:2px 0 8px"></div>
+    <ul class="lb" id="lb"></ul>
+    <div class="note" id="lbNote"></div>
+  </section>
+  <section id="v-me" class="view">
+    <div class="card"><h3>Your player card</h3><div class="stats" id="myStats"></div></div>
+    <div class="card">
+      <h3>Who are you &amp; where do you play from?</h3>
+      <p class="sub" style="white-space:normal;margin:0">Your name and place put you on the city, state, country and worldwide leaderboards.</p>
+      <label for="fName">Display name</label><input id="fName" maxlength="24" placeholder="e.g. Aarav">
+      <div class="row2">
+        <div><label for="fCity">City</label><input id="fCity" maxlength="40" placeholder="e.g. Ghaziabad"></div>
+        <div><label for="fState">State / Region</label><input id="fState" maxlength="40" placeholder="e.g. Uttar Pradesh"></div>
+      </div>
+      <label for="fCountry">Country</label><input id="fCountry" maxlength="40" placeholder="e.g. India">
+      <button class="big" id="saveProf" style="margin-top:14px">Save profile</button>
+      <div class="note" id="saveNote" style="margin:8px 0 0"></div>
+    </div>
+    <div class="card"><h3>Levels beaten</h3><div class="lv" id="beaten" style="grid-template-columns:repeat(10,1fr);gap:4px"></div></div>
+  </section>
+</main>
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div id="ghost" style="display:none"></div>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
