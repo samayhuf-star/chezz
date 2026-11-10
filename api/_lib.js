@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const E = require('../engine.js');
+const E = require('../public/engine.js');
 const store = require('./_store.js');
 
 const SECRET = () => process.env.CHESS_SECRET || '';

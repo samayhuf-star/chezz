@@ -1,8 +1,11 @@
 // Storage layer: Vercel Blob in production, in-memory map when STORE=mem (tests).
 const mem = new Map();
 const isMem = () => process.env.STORE === 'mem';
+// Cloudflare D1 (set per request by src/worker.mjs): a single table kv(k TEXT PRIMARY KEY, v TEXT)
+const D1 = () => globalThis.__DB || null;
 
 async function getJSON(path) {
+  if (D1()) { const r = await D1().prepare('SELECT v FROM kv WHERE k = ?').bind(path).first(); return r ? JSON.parse(r.v) : null; }
   if (isMem()) { const v = mem.get(path); return v ? JSON.parse(v) : null; }
   const { head } = require('@vercel/blob');
   try {
@@ -17,12 +20,14 @@ async function getJSON(path) {
 }
 async function putJSON(path, obj) {
   const body = JSON.stringify(obj);
+  if (D1()) { await D1().prepare('INSERT INTO kv (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v').bind(path, body).run(); return; }
   if (isMem()) { mem.set(path, body); return; }
   const { put } = require('@vercel/blob');
   await put(path, body, { access: 'public', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true, cacheControlMaxAge: 60 });
 }
 async function listJSON(prefix, cap) {
   cap = cap || 5000;
+  if (D1()) { const r = await D1().prepare('SELECT v FROM kv WHERE k LIKE ? LIMIT ?').bind(prefix + '%', cap).all(); return r.results.map(x => JSON.parse(x.v)); }
   if (isMem()) { const out = []; for (const [k, v] of mem) if (k.startsWith(prefix)) out.push(JSON.parse(v)); return out; }
   const { list } = require('@vercel/blob');
   let cursor, urls = [];

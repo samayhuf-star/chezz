@@ -13,7 +13,7 @@ http.createServer(async(req,res)=>{
       require(f)(req,res);});
     return;
   }
-  let p=u.pathname==='/'?'/index.html':u.pathname;const f=path.join(__dirname,p);
-  if(!f.startsWith(__dirname)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){res.statusCode=404;return res.end('nf');}
+  let p=u.pathname==='/'?'/index.html':u.pathname;const f=path.join(__dirname,'public',p);
+  if(!f.startsWith(path.join(__dirname,'public'))||!fs.existsSync(f)||fs.statSync(f).isDirectory()){res.statusCode=404;return res.end('nf');}
   res.setHeader('Content-Type',types[path.extname(f)]||'application/octet-stream');res.end(fs.readFileSync(f));
 }).listen(+process.argv[2]||8099,()=>console.log('up'));

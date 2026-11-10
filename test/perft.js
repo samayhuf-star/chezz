@@ -1,4 +1,4 @@
-const E=require('../engine.js');
+const E=require('../public/engine.js');
 function P(fen,d){const G=E.newGame();E.setupFEN(G,fen);const t=Date.now();return [E.perft(G,d),Date.now()-t];}
 const tests=[
  ['start d4','rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',4,197281],

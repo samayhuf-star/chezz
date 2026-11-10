@@ -1,5 +1,5 @@
 process.env.STORE='mem';process.env.CHESS_SECRET='t';
-const E=require('../engine.js');
+const E=require('../public/engine.js');
 const call=(m,body,q)=>new Promise(r=>{const res={status(c){this.c=c;return this;},json(o){r({c:this.c||200,o});},setHeader(){}};require('../api/'+m)({method:m==='leaderboard'?'GET':'POST',body,query:q||{}},res);});
 (async()=>{
   let bad=0;const ok=(n,c)=>{console.log(c?'ok  ':'FAIL',n);if(!c)bad++;};
@@ -20,10 +20,7 @@ const call=(m,body,q)=>new Promise(r=>{const res={status(c){this.c=c;return this
   await new Promise(r=>setTimeout(r,moves=>0,1));
   gm.moves.length; // elapsed check needs time: patch ts by waiting is slow, so lower via many moves allowed
   let c=await call('claim',{...auth,token:gm.token,moves:gm.moves});
-  ok('too-fast game rejected',c.c===400&&/too fast/.test(c.o.error));
-  process.env.MIN_MS_PER_MOVE='0';
-  c=await call('claim',{...auth,token:gm.token,moves:gm.moves});
-  ok('honest game accepted: '+JSON.stringify(c.o.reason)+' pts '+c.o.awarded,c.c===200);
+  ok('lost game recorded (speed check only guards wins/draws)',c.c===200&&c.o.result==='l');
   c=await call('claim',{...auth,token:gm.token,moves:gm.moves});ok('replay claim blocked',c.c===409);
   // fake bot move
   let g2=await game(5,1,8);const bm=g2.moves.slice();

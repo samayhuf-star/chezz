@@ -1,4 +1,4 @@
-const E=require('../engine.js');
+const E=require('../public/engine.js');
 function play(wl,bl,gid){
   const G=E.newGame(),keys=[E.posKey(G)];let ply=0,maxMs=[0,0];
   while(ply<240){
