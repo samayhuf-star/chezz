@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Chezz",
+    "slug": "chezz",
+    "scheme": "chezz",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#16181d",
+    "splash": { "image": "./assets/splash-icon.png", "resizeMode": "contain", "backgroundColor": "#16181d" },
+    "ios": {
+      "bundleIdentifier": "com.samayvashsht.chezz",
+      "supportsTablet": false,
+      "infoPlist": { "ITSAppUsesNonExemptEncryption": false }
+    },
+    "android": {
+      "package": "com.samayvashsht.chezz",
+      "adaptiveIcon": {
+        "backgroundColor": "#4FD1A5",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "plugins": ["expo-secure-store", "expo-build-properties"],
+    "extra": {}
+  }
+}
