@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, Modal, View, Text, Pressable, ScrollView, ActivityIndicator, Linking, Platform } from 'react-native';
 import { C, S } from './theme';
 import { PRIVACY_URL, TERMS_URL } from './config';
 import { storeReady } from './purchases';
+import { setCustomAttributes } from './revenuecat';
 
 const PERKS = ['All 50 bot levels (Club, Advanced and Master tiers)', 'Unlimited hints', 'Climb the leaderboards with the strongest bots (up to 500 pts per win)', 'Supports ongoing development'];
 
 export default function Paywall({ visible, onClose, billing, reason }) {
+  useEffect(() => {
+    if (visible) setCustomAttributes({ last_paywall_source: reason ? 'locked_feature' : 'upsell_banner', last_paywall_at: new Date().toISOString() });
+  }, [visible, reason]);
   const { offering, loading, buy, restore } = billing;
   const [busy, setBusy] = useState(false), [msg, setMsg] = useState('');
   const pkgs = (offering && offering.availablePackages) || [];

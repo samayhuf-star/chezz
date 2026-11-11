@@ -2,15 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import Purchases from 'react-native-purchases';
 import { RC_IOS_KEY, RC_ANDROID_KEY, ENTITLEMENT } from './config';
+import { initRevenueCat, isRevenueCatReady } from './revenuecat';
 
 const KEY = Platform.OS === 'ios' ? RC_IOS_KEY : RC_ANDROID_KEY;
 let configured = false;
 export const storeReady = () => !!KEY;
 
 export async function initPurchases() {
-  if (configured || !KEY) return false;
-  try { Purchases.configure({ apiKey: KEY }); configured = true; } catch (e) { return false; }
-  return true;
+  if (configured || !KEY) return configured;
+  // Shared RevenueCat setup: SDK config, attribution, subscriber attributes, trusted entitlements.
+  await initRevenueCat({ entitlementId: ENTITLEMENT, iosKey: RC_IOS_KEY, androidKey: RC_ANDROID_KEY });
+  configured = isRevenueCatReady();
+  return configured;
 }
 const isPro = info => !!(info && info.entitlements && info.entitlements.active && info.entitlements.active[ENTITLEMENT]);
 

@@ -6,6 +6,7 @@ import Board from './src/Board';
 import BotWorker from './src/BotWorker';
 import Paywall from './src/Paywall';
 import { usePro } from './src/purchases';
+import { openCustomerCenter } from './src/revenuecat';
 import { api, apiEnabled } from './src/api';
 import { load, save, loadSecret, saveSecret } from './src/storage';
 import { NAMES, TCS, fmt, rid } from './src/levels';
@@ -347,7 +348,7 @@ function Profile({ profile, me, setProfile, saveDoc, openAuth, signOut, deleteAc
     <ScrollView contentContainerStyle={{ padding: 12 }} keyboardShouldPersistTaps="handled">
       <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16, marginBottom: 8 }}>Your player card</Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>{[['points', 'Points'], ['w', 'Wins'], ['d', 'Draws'], ['l', 'Losses']].map(([k, l]) => <View key={k} style={{ flex: 1, backgroundColor: C.card2, borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}><Text style={{ color: C.tx, fontSize: 20, fontWeight: '800' }}>{d[k] | 0}</Text><Text style={S.mut}>{l}</Text></View>)}</View></View>
-      <Pressable onPress={openPaywall} style={[S.card, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}><Text style={{ color: pro ? C.ac : C.gold, fontWeight: '800' }}>{pro ? '👑 Chezz Pro is active' : '👑 Get Chezz Pro – unlock Levels 11–50'}</Text>{!pro && <Text style={{ color: C.mut }}>›</Text>}</Pressable>
+      <Pressable onPress={pro ? openCustomerCenter : openPaywall} style={[S.card, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}><Text style={{ color: pro ? C.ac : C.gold, fontWeight: '800' }}>{pro ? '👑 Chezz Pro is active' : '👑 Get Chezz Pro – unlock Levels 11–50'}</Text>{!pro && <Text style={{ color: C.mut }}>›</Text>}</Pressable>
       <PerfCard d={profile} />
       <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16 }}>{!profile ? 'Account' : profile.email ? 'Account' : 'Guest account'}</Text>
         <Text style={[S.mut, { marginTop: 4 }]}>{!profile ? 'You are not signed in.' : profile.email ? 'Signed in as ' + profile.email : 'Your stats live on this device only. Add an email and password to keep them and sign in anywhere.'}</Text>
