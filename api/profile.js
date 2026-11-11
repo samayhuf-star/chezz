@@ -8,7 +8,7 @@ module.exports = L.handler('POST', async (req, res, b) => {
       points: 0, w: 0, l: 0, d: 0, best: 0, games: 0, beaten: [], claimed: [], created: Date.now() };
   } else {
     doc = await L.loadPlayer(b.id);
-    if (!doc || doc.secretHash !== L.sha(b.secret)) return res.status(403).json({ error: 'Not signed in' });
+    if (!L.authOK(doc, b.secret)) return res.status(403).json({ error: 'Not signed in' });
   }
   if (b.name !== undefined) {
     const name = L.clean(b.name, 24), city = L.clean(b.city, 40), state = L.clean(b.state, 40), country = L.clean(b.country, 40);
@@ -18,5 +18,5 @@ module.exports = L.handler('POST', async (req, res, b) => {
   } else if (!doc.name) return res.status(400).json({ error: 'Please enter a display name' });
   doc.updated = Date.now();
   await L.savePlayer(doc);
-  res.status(200).json({ id: doc.id, secret, doc: L.publicDoc(doc) });
+  res.status(200).json({ id: doc.id, secret, doc: L.myDoc(doc) });
 });

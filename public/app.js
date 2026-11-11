@@ -3,7 +3,7 @@
 var E=window.Chezz,$=function(i){return document.getElementById(i);};
 var NAMES=['Pawny','Wobbles','Sprout','Biscuit','Dot','Pebble','Nibbles','Ziggy','Mochi','Tumble','Maple','Clover','Rusty','Ember','Juniper','Marlow','Pixel','Atlas','Cosmo','Willow','Sterling','Harper','Knox','Orion','Saffron','Beckett','Indigo','Rowan','Quill','Falcon','Vesper','Cipher','Onyx','Phoenix','Talon','Zephyr','Nova','Titan','Raven','Sphinx','Viper','Hydra','Kraken','Colossus','Oracle','Warden','Sovereign','Leviathan','Archon','Grandmaster Zero'];
 var GLYPH={1:'♟',2:'♞',3:'♝',4:'♜',5:'♛',6:'♚'};
-var TCS=[{n:'No clock',b:0,i:0},{n:'1 min',b:60,i:0},{n:'3 min',b:180,i:0},{n:'3 | 2',b:180,i:2},{n:'5 min',b:300,i:0},{n:'10 min',b:600,i:0},{n:'10 | 5',b:600,i:5},{n:'15 | 10',b:900,i:10},{n:'30 min',b:1800,i:0}];
+var TCS=[{n:'7 min',b:420,i:0}]; // one fixed time control for every game: 7 minutes each side
 var KEY={me:'chezz.me',game:'chezz.game',pend:'chezz.pending',pref:'chezz.pref',mute:'chezz.mute'};
 function ls(k,v){try{if(v===undefined){var s=localStorage.getItem(k);return s?JSON.parse(s):null;}if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v));}catch(e){}return null;}
 var me=ls(KEY.me),pref=ls(KEY.pref)||{level:5,color:'w',tc:5,tier:0},muted=!!ls(KEY.mute);
@@ -79,19 +79,24 @@ function humanMove(m){
   applyMove(m);afterMove(true,cap);
   if(!S.over)botTurn();
 }
+var BOT_DELAY=1000; // the bot never replies faster than 1 second
 function botTurn(){
   if(!S||S.over)return;
   busy=true;var thinkT=setTimeout(function(){setStatus('<span class="spin"></span>'+botName(S.level)+' is thinking…','think');},180);
-  var ply=S.moves.length,gid=S.g,moves=S.moves.slice(),game=S;
+  var ply=S.moves.length,moves=S.moves.slice(),game=S,t0=performance.now();
+  S.botT0=t0;
   askBot(moves,S.level,E.botSeed(S.g,ply),function(m){
-    clearTimeout(thinkT);
-    if(S!==game||S.over||S.moves.length!==ply){return;}
-    busy=false;
-    if(!m){return;}
-    var cap=S.G.b[(m>>7)&127]!==0||((m>>17)&2);
-    // bot spends a believable slice of its own clock but can never lose on time
-    if(S.tc.b&&S.moves.length>=2){var cost=400+S.level*45;S.clk[sideIdx(-S.human)]=Math.max(1000,S.clk[sideIdx(-S.human)]-cost);}
-    applyMove(m);afterMove(false,cap);
+    var wait=Math.max(0,BOT_DELAY-(performance.now()-t0));
+    setTimeout(function(){
+      clearTimeout(thinkT);
+      if(S!==game||S.over||S.moves.length!==ply){return;}
+      busy=false;S.botT0=0;
+      if(!m){return;}
+      var cap=S.G.b[(m>>7)&127]!==0||((m>>17)&2);
+      // the bot's clock really runs while it thinks; it can never lose on time
+      if(S.tc.b&&S.moves.length>=2){S.clk[sideIdx(-S.human)]=Math.max(1000,S.clk[sideIdx(-S.human)]-(performance.now()-t0));}
+      applyMove(m);afterMove(false,cap);
+    },wait);
   });
 }
 
@@ -209,7 +214,7 @@ function clocks(){
   var bi=sideIdx(-S.human),mi=sideIdx(S.human);
   var run=S.running&&!S.over;
   var tNow=run?performance.now()-S.last:0;
-  var bt=S.clk[bi]-(run&&S.G.t!==S.human?0:0),mt=S.clk[mi]-(run&&S.G.t===S.human?tNow:0);
+  var bt=Math.max(1000,S.clk[bi]-(run&&S.G.t!==S.human&&S.botT0?performance.now()-S.botT0:0)),mt=S.clk[mi]-(run&&S.G.t===S.human?tNow:0);
   top.textContent=fmt(bt);bot.textContent=fmt(mt);
   top.className='clk'+(run&&S.G.t!==S.human?' run':'');
   bot.className='clk'+(run&&S.G.t===S.human?' run':'')+(mt<10000?' low':'');
@@ -359,25 +364,22 @@ function confirmBox(title,msg,okLabel,ok){
 function newGameModal(){
   var p=Object.assign({},pref);
   function draw(){
-    var T=E.TIERS,h='<h2>New game</h2><p>'+(me&&me.id?'Ranked: your result is verified and counts for the leaderboard.':'You are not signed in – this will be a casual game. Create a profile to rank.')+'</p>';
+    var T=E.TIERS,h='<h2>New game</h2><p>'+'Ranked: your result is verified, counts for the leaderboard and is added to your stats.'+'</p>';
     h+='<div class="tiers">';T.forEach(function(t,i){h+='<button data-t="'+i+'" class="'+(p.tier===i?'on':'')+'"><span>'+t.icon+'</span>'+t.name+'<br>'+t.from+'–'+t.to+'</button>';});h+='</div><div class="lv">';
     var t=T[p.tier];for(var l=t.from;l<=t.to;l++){
       var beat=me&&me.doc&&(me.doc.beaten||[]).indexOf(l)>=0;
       h+='<button class="lc'+(p.level===l?' on':'')+'" data-l="'+l+'"><span class="n">'+l+'</span><span class="t">'+botName(l)+(beat?' ✓':'')+'<small>'+(l*10)+' pts for a win</small></span></button>';}
     h+='</div><label>Play as</label><div class="seg" id="seg">';
     [['w','♔ White'],['r','🎲 Random'],['b','♚ Black']].forEach(function(c){h+='<button data-c="'+c[0]+'" class="'+(p.color===c[0]?'on':'')+'">'+c[1]+'</button>';});
-    h+='</div><label>Time control</label><div class="chips" id="tcs">';
-    TCS.forEach(function(t,i){h+='<button data-tc="'+i+'" class="'+(p.tc===i?'on':'')+'">'+t.n+'</button>';});
-    h+='</div><button class="big" id="go">Play '+botName(p.level)+' (Level '+p.level+')</button><button class="ghost" id="cancelNG">Cancel</button>';
+    h+='</div><div class="note" style="margin:10px 0 0">⏱ Every game: 7 minutes each side</div><button class="big" id="go">Play '+botName(p.level)+' (Level '+p.level+')</button><button class="ghost" id="cancelNG">Cancel</button>';
     $('sheet').innerHTML=h;
     $('sheet').querySelectorAll('[data-t]').forEach(function(b){b.onclick=function(){p.tier=+b.dataset.t;if(p.level<E.TIERS[p.tier].from||p.level>E.TIERS[p.tier].to)p.level=E.TIERS[p.tier].from;draw();};});
     $('sheet').querySelectorAll('[data-l]').forEach(function(b){b.onclick=function(){p.level=+b.dataset.l;draw();};});
     $('sheet').querySelectorAll('[data-c]').forEach(function(b){b.onclick=function(){p.color=b.dataset.c;draw();};});
-    $('sheet').querySelectorAll('[data-tc]').forEach(function(b){b.onclick=function(){p.tc=+b.dataset.tc;draw();};});
     $('cancelNG').onclick=closeModal;
     $('go').onclick=async function(){
       pref=p;ls(KEY.pref,p);$('go').disabled=true;
-      var human=p.color==='w'?1:p.color==='b'?-1:(crypto.getRandomValues(new Uint8Array(1))[0]&1?1:-1),tc=TCS[p.tc];
+      var human=p.color==='w'?1:p.color==='b'?-1:(crypto.getRandomValues(new Uint8Array(1))[0]&1?1:-1),tc=TCS[0];
       var o={level:p.level,human:human,tc:{b:tc.b,i:tc.i},g:rid(),token:null};
       if(me&&me.id){
         try{var n=await api('new',{id:me.id,secret:me.secret,level:p.level,human:human,base:tc.b,inc:tc.i});o.g=n.g;o.token=n.token;}
@@ -442,7 +444,8 @@ function refreshMe(fill){
   var d=me&&me.doc||{points:0,w:0,l:0,d:0,beaten:[]};
   $('myStats').innerHTML=[['points','Points'],['w','Wins'],['d','Draws'],['l','Losses']].map(function(x){return '<div class="stat"><b>'+(d[x[0]]|0)+'</b><small>'+x[1]+'</small></div>';}).join('');
   var h='';for(var l=1;l<=E.LEVELS;l++){var b=(d.beaten||[]).indexOf(l)>=0;h+='<div class="stat" style="padding:5px 0;'+(b?'background:#233a34;color:var(--ac)':'opacity:.55')+'"><b style="font-size:13px">'+l+'</b></div>';}
-  $('beaten').innerHTML=h;
+  $('beaten').innerHTML=h;renderAcct();renderPerf();
+  $('acctLine').textContent=me&&me.doc?(me.doc.name+(me.doc.email?'':' · guest')):'';
   if(fill&&me&&me.doc){$('fName').value=me.doc.name||'';$('fCity').value=me.doc.city||'';$('fState').value=me.doc.state||'';$('fCountry').value=me.doc.country||'';}
   renderBars();
 }
@@ -454,6 +457,62 @@ $('saveProf').onclick=async function(){
   }catch(e){n.textContent=e.message;}
 };
 
+/* ---------- accounts: guest or email + password ---------- */
+function setMe(j){me={id:j.id,secret:j.secret||(me&&me.secret),doc:j.doc};ls(KEY.me,me);refreshMe(true);loadLB();}
+function authModal(after,mode){
+  mode=mode||'choose';var h='';
+  if(mode==='choose'){
+    h='<h2>Welcome to Chezz</h2><p>Play, climb the leaderboards and keep your stats.</p><button class="big" id="aGuest">Continue as guest</button><button class="ghost" id="aIn">Sign in with email</button><button class="ghost" id="aUp">Create account</button><div class="note" style="margin:10px 0 0">Guests are saved on this device only. Create an account any time to keep your stats and play anywhere.</div>';
+  }else{
+    var up=mode==='up';
+    h='<h2>'+(up?'Create account':'Sign in')+'</h2><label for="aEmail">Email</label><input id="aEmail" type="email" autocomplete="email" placeholder="you@example.com"><label for="aPw">Password'+(up?' (8+ characters)':'')+'</label><input id="aPw" type="password" autocomplete="'+(up?'new-password':'current-password')+'"><div class="note" id="aErr" style="color:var(--bad);margin:8px 0 0"></div><button class="big" id="aGo">'+(up?'Create account':'Sign in')+'</button><button class="ghost" id="aBack">Back</button>';
+  }
+  $('sheet').dataset.dismiss='0';openModal(h);
+  if(mode==='choose'){
+    $('aGuest').onclick=async function(){this.disabled=true;try{setMe(await api('auth',{mode:'guest'}));closeModal();toast('Playing as '+me.doc.name);if(after)after();}catch(e){toast(e.message||'Could not start – try again');this.disabled=false;}};
+    $('aIn').onclick=function(){authModal(after,'in');};$('aUp').onclick=function(){authModal(after,'up');};
+  }else{
+    $('aBack').onclick=function(){authModal(after,'choose');};
+    $('aGo').onclick=async function(){
+      var b=this;b.disabled=true;$('aErr').textContent='';
+      try{
+        var body={mode:mode==='up'?'register':'login',email:$('aEmail').value,password:$('aPw').value};
+        if(mode==='up'&&me&&me.id){body.id=me.id;body.secret=me.secret;}
+        setMe(await api('auth',body));closeModal();toast(mode==='up'?'Account created':'Signed in as '+me.doc.name);if(after)after();
+      }catch(e){$('aErr').textContent=e.message;b.disabled=false;}
+    };
+  }
+}
+function signOut(){
+  confirmBox('Sign out?',(me&&me.doc&&!me.doc.email)?'You are a guest – signing out will lose this guest account and its stats. Create an account first to keep them.':'You can sign back in any time with your email and password.','Sign out',function(){
+    me=null;ls(KEY.me,null);ls(KEY.game,null);S=null;refreshMe(true);render();authModal(newGameModal);
+  });
+}
+function renderAcct(){
+  var d=me&&me.doc,el=$('acct');
+  if(!d){el.innerHTML='<h3>Account</h3><p class="sub" style="white-space:normal;margin:0">You are not signed in.</p><button class="big" id="acIn" style="margin-top:10px">Sign in or play as guest</button>';$('acIn').onclick=function(){authModal(newGameModal);};return;}
+  if(!d.email){
+    el.innerHTML='<h3>Guest account</h3><p class="sub" style="white-space:normal;margin:0">Your stats live on this device only. Add an email and password to keep them and sign in anywhere.</p><button class="big" id="acUp" style="margin-top:10px">Create account</button><button class="ghost" id="acIn">Sign in to an existing account</button><button class="ghost" id="acOut">Sign out</button>';
+    $('acUp').onclick=function(){authModal(null,'up');};$('acIn').onclick=function(){authModal(newGameModal,'in');};
+  }else{
+    el.innerHTML='<h3>Account</h3><p class="sub" style="white-space:normal;margin:0">Signed in as '+esc(d.email)+'</p><button class="ghost" id="acOut" style="margin-top:10px">Sign out</button>';
+  }
+  $('acOut').onclick=signOut;
+}
+var LVN=function(l){return botName(l);};
+function renderPerf(){
+  var d=me&&me.doc,el=$('perfBody');
+  if(!d||!d.stats||!(d.games|0)){el.innerHTML='<p class="sub" style="white-space:normal;margin:0">Finish a ranked game and your performance shows up here.</p>';return;}
+  var s=d.stats,g=d.games|0,wr=Math.round(100*(d.w|0)/g),rec=function(r){return r.w+'W '+r.d+'D '+r.l+'L';};
+  var mins=Math.round((s.secs|0)/60),avg=Math.round((s.plies|0)/2/g);
+  var st=s.streak>0?'🔥 '+s.streak+' win streak':s.streak<0?(-s.streak)+' loss streak':'–';
+  var h='<div class="stats">'+[[wr+'%','Win rate'],[g,'Games'],[d.best||0,'Best level beaten'],[s.bestStreak|0,'Best streak']].map(function(x){return '<div class="stat"><b>'+x[0]+'</b><small>'+x[1]+'</small></div>';}).join('')+'</div>';
+  h+='<div class="sub" style="white-space:normal;margin:10px 0 0">As White: '+rec(s.white)+' · As Black: '+rec(s.black)+'<br>Now: '+st+' · Avg game: '+avg+' moves · Time played: '+mins+' min'+((s.timeouts|0)?' · Lost on time: '+s.timeouts:'')+'</div>';
+  var lv=Object.keys(s.lv||{}).map(Number).sort(function(a,b){return a-b;});
+  if(lv.length){h+='<label>By level</label><ul class="lb" style="margin:0">'+lv.map(function(l){var r=s.lv[l];return '<li><span class="rk">'+l+'</span><div style="min-width:0"><div class="nm">'+esc(LVN(l))+'</div><div class="sub">'+rec(r)+'</div></div><b>'+Math.round(100*r.w/(r.w+r.d+r.l))+'%</b></li>';}).join('')+'</ul>';}
+  if((s.recent||[]).length){h+='<label>Recent games</label><ul class="lb" style="margin:0">'+s.recent.map(function(x){var res=x.r==='w'?'Won':x.r==='l'?'Lost':'Draw';return '<li><span class="rk '+(x.r==='w'?'g1':'')+'">'+(x.r==='w'?'W':x.r==='l'?'L':'D')+'</span><div style="min-width:0"><div class="nm">vs '+esc(LVN(x.l))+' (Lv '+x.l+')</div><div class="sub">'+res+' · '+esc(x.why)+' · '+(x.c==='w'?'White':'Black')+' · '+Math.ceil(x.p/2)+' moves</div></div><b>'+(x.pts?'+'+x.pts:'')+'</b></li>';}).join('')+'</ul>';}
+  el.innerHTML=h;
+}
 /* ---------- boot ---------- */
 refreshMe(true);render();retryPending();
 var saved=ls(KEY.game);
@@ -462,6 +521,6 @@ if(saved&&saved.moves&&saved.moves.length>=2){
   r.innerHTML='Unfinished game vs '+botName(saved.level)+' (Level '+saved.level+')<br><button id="rs">Resume</button><button class="g" id="rd">Discard</button>';
   $('rs').onclick=function(){r.style.display='none';if(!restore(saved)){toast('Could not restore that game');ls(KEY.game,null);}};
   $('rd').onclick=function(){r.style.display='none';ls(KEY.game,null);if(saved.ranked){toast('Game discarded (no result)');}newGameModal();};
-}else{ls(KEY.game,null);setTimeout(newGameModal,150);}
+}else{ls(KEY.game,null);setTimeout(function(){if(me&&me.id)newGameModal();else authModal(newGameModal);},150);}
 window.__chezz={get S(){return S;},E:E};
 })();

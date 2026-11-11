@@ -32,6 +32,17 @@ const validId = id => typeof id === 'string' && /^[a-f0-9]{16}$/.test(id);
 
 async function loadPlayer(id) { return validId(id) ? store.getJSON('players/' + id + '.json') : null; }
 async function savePlayer(doc) { return store.putJSON('players/' + doc.id + '.json', doc); }
+const authOK = (d, secret) => !!d && !!secret && (d.secretHash === sha(secret) || (d.sessions || []).includes(sha(secret)));
+const PBKDF2_ITER = 100000;
+async function hashPw(pw, saltHex) {
+  const subtle = crypto.webcrypto.subtle, salt = Buffer.from(saltHex, 'hex');
+  const key = await subtle.importKey('raw', Buffer.from(String(pw)), 'PBKDF2', false, ['deriveBits']);
+  const bits = await subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: PBKDF2_ITER }, key, 256);
+  return Buffer.from(bits).toString('hex');
+}
+const emailKey = e => 'emails/' + sha(String(e).trim().toLowerCase()) + '.json';
+const blankStats = () => ({ lv: {}, white: { w: 0, l: 0, d: 0 }, black: { w: 0, l: 0, d: 0 }, streak: 0, bestStreak: 0, plies: 0, secs: 0, timeouts: 0, resigns: 0, recent: [] });
+const statsOf = d => Object.assign(blankStats(), d.stats || {});
 const publicDoc = d => ({ id: d.id, name: d.name, city: d.city, state: d.state, country: d.country,
   points: d.points | 0, w: d.w | 0, l: d.l | 0, d: d.d | 0, best: d.best | 0, games: d.games | 0, beaten: d.beaten || [] });
 
@@ -95,4 +106,6 @@ function handler(method, fn) {
     }
   };
 }
-module.exports = { E, store, sign, verify, sha, clean, badText, norm, validId, loadPlayer, savePlayer, publicDoc, verifyGame, handler };
+// full document for the signed-in owner (adds guest flag, email and the performance stats)
+const myDoc = d => Object.assign(publicDoc(d), { guest: !d.email, email: d.email || '', stats: statsOf(d) });
+module.exports = { authOK, hashPw, emailKey, blankStats, statsOf, myDoc, E, store, sign, verify, sha, clean, badText, norm, validId, loadPlayer, savePlayer, publicDoc, verifyGame, handler };

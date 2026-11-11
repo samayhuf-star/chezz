@@ -3,7 +3,8 @@ import profile from '../api/profile.js';
 import newGame from '../api/new.js';
 import claim from '../api/claim.js';
 import leaderboard from '../api/leaderboard.js';
-const routes = { '/api/profile': profile, '/api/new': newGame, '/api/claim': claim, '/api/leaderboard': leaderboard };
+import auth from '../api/auth.js';
+const routes = { '/api/profile': profile, '/api/new': newGame, '/api/claim': claim, '/api/leaderboard': leaderboard, '/api/auth': auth };
 
 export default {
   async fetch(request, env) {

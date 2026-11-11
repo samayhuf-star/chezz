@@ -1,0 +1,17 @@
+process.env.STORE='mem';process.env.CHESS_SECRET='t';
+const call=(m,body,q)=>new Promise(r=>{const res={status(c){this.c=c;return this;},json(o){r({c:this.c||200,o});},setHeader(){}};require('../api/'+m)({method:m==='leaderboard'?'GET':'POST',body,query:q||{}},res);});
+(async()=>{let bad=0;const ok=(n,c)=>{console.log(c?'ok  ':'FAIL',n);if(!c)bad++;};
+ const g=await call('auth',{mode:'guest'});ok('guest created',g.c===200&&g.o.id&&g.o.secret&&g.o.doc.guest&&/^Guest /.test(g.o.doc.name));
+ let r=await call('auth',{mode:'register',email:'a@b.co',password:'short'});ok('short pw rejected',r.c===400);
+ r=await call('auth',{mode:'register',email:'bad',password:'longenough1'});ok('bad email rejected',r.c===400);
+ r=await call('auth',{mode:'register',email:'A@b.co',password:'longenough1',id:g.o.id,secret:g.o.secret});ok('guest upgraded keeps id',r.c===200&&r.o.id===g.o.id&&!r.o.doc.guest&&r.o.doc.email==='a@b.co');
+ r=await call('auth',{mode:'register',email:'a@b.co',password:'longenough1'});ok('dup email 409',r.c===409);
+ let l=await call('auth',{mode:'login',email:'a@B.co',password:'wrongwrong'});ok('wrong pw 401',l.c===401);
+ l=await call('auth',{mode:'login',email:'a@b.co',password:'longenough1'});ok('login ok',l.c===200&&l.o.id===g.o.id&&l.o.secret&&l.o.secret!==g.o.secret);
+ const pr=await call('profile',{id:l.o.id,secret:l.o.secret,name:'Ann',city:'X',state:'Y',country:'Z'});ok('session secret works',pr.c===200&&pr.o.doc.name==='Ann');
+ ok('no hashes leaked',!JSON.stringify(l.o).match(/pwHash|pwSalt|secretHash/));
+ const n=await call('new',{id:l.o.id,secret:l.o.secret,level:3,human:1,base:9999,inc:9});const E=require('../public/engine.js');
+ const st=JSON.parse(Buffer.from(n.o.token.split('.')[0],'base64url').toString());ok('clock forced to 7:00',st.tc[0]===420&&st.tc[1]===0);
+ for(let i=0;i<8;i++)await call('auth',{mode:'login',email:'a@b.co',password:'nope-nope'});
+ l=await call('auth',{mode:'login',email:'a@b.co',password:'longenough1'});ok('lockout after repeated failures',l.c===429);
+ console.log(bad?'FAILED':'all passed');process.exit(bad?1:0);})();
