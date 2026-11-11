@@ -24,7 +24,7 @@ export default function App() {
   const [modal, setModal] = useState(null); // 'new' | 'end' | {promo:[...]}
   const [paywall, setPaywall] = useState(null), [thinking, setThinking] = useState(false), [endNote, setEndNote] = useState('');
   const [pref, setPref] = useState({ level: 5, color: 'w', tc: 5, tier: 0 }), [profile, setProfile] = useState(null);
-  const [resume, setResume] = useState(null), [armed, setArmed] = useState(false);
+  const [resume, setResume] = useState(null), [armed, setArmed] = useState(false), [rv, setRv] = useState(null);
   const billing = usePro();
 
   /* ---------- boot ---------- */
@@ -42,7 +42,7 @@ export default function App() {
   const startGame = o => {
     const G = E.newGame();
     game.current = { level: o.level, human: o.human, g: o.g, token: o.token, ranked: !!o.token, tc: o.tc, clk: [o.tc.b * 1000, o.tc.b * 1000], last: 0, running: false, G, keys: [E.posKey(G)], moves: [], sans: [], over: null, lastMove: 0, drawAsked: 0, busy: false, t0: Date.now() };
-    setFlip(o.human === -1); setSel(-1); setHint(null); setModal(null); setEndNote(''); setTab('play'); rerender(); persist();
+    setFlip(o.human === -1); setSel(-1); setRv(null); setHint(null); setModal(null); setEndNote(''); setTab('play'); rerender(); persist();
     if (o.human === -1) botTurn();
   };
   const liveClk = g => { const c = g.clk.slice(); if (g.running && g.G.t === g.human) c[sIdx(g.human)] -= Date.now() - g.last; return c; };
@@ -117,6 +117,7 @@ export default function App() {
   const targets = {}; legal.forEach(m => { if ((m & 127) === sel) targets[(m >> 7) & 127] = 1; });
   const onTap = s => {
     const gm = game.current; if (!gm || gm.over) return;
+    if (rv !== null) return Alert.alert('Viewing an earlier move', 'Tap ⏭ to return to the game.');
     if (gm.busy || gm.G.t !== gm.human) { if (gm.busy) return; return; }
     const p = gm.G.b[s], mine = p && (p > 0 ? 1 : -1) === gm.human;
     if (sel >= 0 && sel !== s) {
@@ -135,7 +136,7 @@ export default function App() {
   };
   const undo = () => {
     const gm = game.current; if (!gm || gm.over || gm.busy || gm.moves.length < 2) return;
-    const go = () => { const n = gm.G.t === gm.human ? 2 : 1, mv = gm.moves.slice(0, gm.moves.length - n), r = E.replay(mv); if (!r) return; Object.assign(gm, { moves: mv, G: r.G, keys: r.keys, sans: r.sans, lastMove: mv[mv.length - 1] || 0, token: null, ranked: false, running: gm.tc.b > 0 && mv.length >= 2, last: Date.now() }); setSel(-1); rerender(); persist(); };
+    const go = () => { setRv(null); const n = gm.G.t === gm.human ? 2 : 1, mv = gm.moves.slice(0, gm.moves.length - n), r = E.replay(mv); if (!r) return; Object.assign(gm, { moves: mv, G: r.G, keys: r.keys, sans: r.sans, lastMove: mv[mv.length - 1] || 0, token: null, ranked: false, running: gm.tc.b > 0 && mv.length >= 2, last: Date.now() }); setSel(-1); rerender(); persist(); };
     if (gm.ranked) Alert.alert('Take back your move?', 'Using Undo makes this game casual: no points or leaderboard result.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Undo anyway', onPress: go }]); else go();
   };
   const hintNow = () => {
@@ -166,7 +167,11 @@ export default function App() {
   /* ---------- render ---------- */
   const botCol = g ? -g.human : -1, m = material(g ? g.G : E.newGame());
   const clk = g ? liveClk(g) : [0, 0], bi = g ? sIdx(-g.human) : 1, mi = g ? sIdx(g.human) : 0;
-  const lastSq = g && g.lastMove ? [g.lastMove & 127, (g.lastMove >> 7) & 127] : null;
+  const nMoves = g ? g.moves.length : 0, rvOk = g && rv !== null && rv < nMoves;
+  const rvGame = rvOk ? E.replay(g.moves.slice(0, rv)) : null, viewing = !!rvGame;
+  const goView = k => { if (!g || !nMoves) return; const at = viewing ? rv : nMoves, t = Math.max(0, Math.min(nMoves, k === 'first' ? 0 : k === 'last' ? nMoves : at + k)); setSel(-1); setRv(t >= nMoves ? null : t); };
+  const vm = viewing ? (rv > 0 ? g.moves[rv - 1] : 0) : g && g.lastMove;
+  const lastSq = vm ? [vm & 127, (vm >> 7) & 127] : null;
   const lvl = g ? g.level : pref.level;
   let status = 'Choose a level to start', stCol = C.tx;
   if (g && g.over) { status = (g.over.r === 'w' ? 'You won – ' : g.over.r === 'l' ? 'You lost – ' : 'Draw – ') + g.over.why; stCol = C.ac; }
@@ -192,9 +197,14 @@ export default function App() {
               <Pressable style={[S.big, { paddingVertical: 9, paddingHorizontal: 18 }]} onPress={() => restore(resume)}><Text style={S.bigT}>Resume</Text></Pressable>
               <Pressable style={[S.ghost, { marginTop: 0, paddingHorizontal: 18 }]} onPress={() => { save('game', null); setResume(null); setModal('new'); }}><Text style={S.ghostT}>Discard</Text></Pressable></View></View>}
           <PlayerBar icon={tierIcon(lvl)} name={NAMES[lvl - 1]} sub={'Lv ' + lvl} caps={botCol === 1 ? m.capW : m.capB} lead={g ? (g.human === 1 ? -m.diff : m.diff) : 0} clock={g && g.tc.b ? fmt(clk[bi]) : '--:--'} run={!!(g && g.running && !g.over && g.G.t !== g.human)} />
-          <Board G={g ? g.G : E.newGame()} flip={flip} sel={sel} targets={targets} last={lastSq} hint={hint} onTap={onTap} />
+          <Board G={viewing ? rvGame.G : g ? g.G : E.newGame()} flip={flip} sel={viewing ? -1 : sel} targets={viewing ? null : targets} last={lastSq} hint={viewing ? null : hint} onTap={onTap} />
           <PlayerBar icon="🙂" name={(profile && profile.name) || 'You'} badge={g && !g.over ? (g.ranked ? 'RANKED' : 'CASUAL') : ''} caps={g && g.human === -1 ? m.capB : m.capW} lead={g ? (g.human === 1 ? m.diff : -m.diff) : 0} clock={g && g.tc.b ? fmt(clk[mi]) : '--:--'} run={!!(g && g.running && !g.over && g.G.t === g.human)} low={!!(g && g.tc.b && clk[mi] < 10000)} />
-          <Text style={{ color: stCol, fontWeight: '700', textAlign: 'center', marginVertical: 8, minHeight: 22 }}>{status}</Text>
+          <Text style={{ color: stCol, fontWeight: '700', textAlign: 'center', marginVertical: 8, minHeight: 22 }}>{viewing ? 'Viewing move ' + rv + ' of ' + nMoves + ' – tap ⏭ to return' : status}</Text>
+          <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 10, alignItems: 'center', marginBottom: 6 }}>
+            <Btn t="⏮" onPress={() => goView('first')} off={!nMoves || (viewing ? rv : nMoves) <= 0} /><Btn t="◀" onPress={() => goView(-1)} off={!nMoves || (viewing ? rv : nMoves) <= 0} />
+            <Text style={{ color: C.mut, fontWeight: '700', minWidth: 74, textAlign: 'center' }}>{nMoves ? (viewing ? 'Move ' + rv + '/' + nMoves : 'Live') : ''}</Text>
+            <Btn t="▶" onPress={() => goView(1)} off={!viewing} /><Btn t="⏭" onPress={() => goView('last')} off={!viewing} />
+          </View>
           <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 10 }}>
             <Btn t="＋ New" onPress={newGameBtn} pri /><Btn t="↶ Undo" onPress={undo} off={!live || g.moves.length < 2} /><Btn t={billing.pro ? '💡 Hint' : '💡 Hint 👑'} onPress={hintNow} off={!live} />
             <Btn t="½ Draw" onPress={offerDraw} off={!live || g.moves.length < 20} /><Btn t="⇅ Flip" onPress={() => setFlip(f => !f)} /><Btn t={armed ? 'Sure?' : g && g.moves.length < 2 ? '✕ Abort' : '⚑ Resign'} onPress={resign} off={!live} danger={armed} />

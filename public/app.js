@@ -7,7 +7,7 @@ var TCS=[{n:'No clock',b:0,i:0},{n:'1 min',b:60,i:0},{n:'3 min',b:180,i:0},{n:'3
 var KEY={me:'chezz.me',game:'chezz.game',pend:'chezz.pending',pref:'chezz.pref',mute:'chezz.mute'};
 function ls(k,v){try{if(v===undefined){var s=localStorage.getItem(k);return s?JSON.parse(s):null;}if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v));}catch(e){}return null;}
 var me=ls(KEY.me),pref=ls(KEY.pref)||{level:5,color:'w',tc:5,tier:0},muted=!!ls(KEY.mute);
-var S=null,flip=false,sel=-1,legalCache=[],busy=false,armT=0,drag=null,botId=0,hintMove=0;
+var rv=null,S=null,flip=false,sel=-1,legalCache=[],busy=false,armT=0,drag=null,botId=0,hintMove=0;
 
 /* ---------- bot worker (replies instantly, off the main thread) ---------- */
 var worker=null,waiting={};
@@ -43,7 +43,7 @@ function startGame(opt){
   S={level:opt.level,human:opt.human,g:opt.g,token:opt.token||null,ranked:!!opt.token,unrankedWhy:'',
      tc:opt.tc,clk:[opt.tc.b*1000,opt.tc.b*1000],last:0,running:false,
      G:g,keys:[E.posKey(g)],moves:[],sans:[],over:null,lastMove:null,drawAsked:0,t0:Date.now()};
-  flip=opt.human===-1;sel=-1;hintMove=0;busy=false;
+  flip=opt.human===-1;sel=-1;hintMove=0;busy=false;rv=null;
   render();persist();
   if(S.human===-1)botTurn();
 }
@@ -55,7 +55,7 @@ function restore(d){
      G:r.G,keys:r.keys,moves:d.moves.slice(),sans:r.sans,over:null,lastMove:d.moves.length?d.moves[d.moves.length-1]:null,drawAsked:d.drawAsked||0,t0:d.t0};
   // time spent away counts against the player to the move (no clock tricks by refreshing)
   if(S.tc.b&&S.moves.length>=2&&S.G.t===S.human){S.clk[sideIdx(S.human)]-=Date.now()-d.saved;}
-  flip=S.human===-1;sel=-1;busy=false;
+  flip=S.human===-1;sel=-1;busy=false;rv=null;
   render();
   if(S.G.t!==S.human)botTurn();
   return true;
@@ -137,12 +137,19 @@ function buildBoard(){
   for(var i=0;i<64;i++){var d=document.createElement('div');d.className='sq';d.dataset.i=i;boardEl.appendChild(d);cells.push(d);}
 }
 buildBoard();
+function revGame(){
+  if(!S||rv===null)return null;
+  if(rv>=S.moves.length){rv=null;return null;}
+  var r=E.replay(S.moves.slice(0,rv));if(!r){rv=null;return null;}
+  return r.G;
+}
 function render(){
-  var G=S?S.G:E.newGame();
+  var rg=revGame(),G=rg||(S?S.G:E.newGame());
   var legalTo={},legalFrom=null;
-  if(S&&sel>=0){legalCache.forEach(function(m){if((m&127)===sel)legalTo[(m>>7)&127]=1;});}
-  var lm=S&&S.lastMove?[S.lastMove&127,(S.lastMove>>7)&127]:[-9,-9],ksq=S&&E.inCheck(G)?G.k[G.t===1?0:1]:-9;
-  var hm=hintMove?[hintMove&127,(hintMove>>7)&127]:[-9,-9];
+  if(S&&sel>=0&&!rg){legalCache.forEach(function(m){if((m&127)===sel)legalTo[(m>>7)&127]=1;});}
+  var lmv=rg?(rv>0?S.moves[rv-1]:0):(S?S.lastMove:0);
+  var lm=lmv?[lmv&127,(lmv>>7)&127]:[-9,-9],ksq=S&&E.inCheck(G)?G.k[G.t===1?0:1]:-9;
+  var hm=hintMove&&!rg?[hintMove&127,(hintMove>>7)&127]:[-9,-9];
   for(var i=0;i<64;i++){
     var s=sqAt(i),p=G.b[s],el=cells[i],r=i>>3,c=i&7;
     var cls='sq '+(((r+c)&1)?'d':'l');
@@ -159,7 +166,8 @@ function render(){
     if(p)h+='<span class="pc '+(p>0?'w':'b')+'">'+GLYPH[Math.abs(p)]+'</span>';
     if(el._h!==h){el.innerHTML=h;el._h=h;}
   }
-  renderBars();renderMoves();renderButtons();
+  renderBars();renderMoves();renderButtons();renderNav();
+  if(rg){setStatus('Viewing move '+rv+' of '+S.moves.length+' – tap ⏭ to return to the game','');return;}
   if(S&&!S.over){
     if(!busy||S.G.t===S.human){
       var tm=S.G.t===S.human;
@@ -213,6 +221,25 @@ function renderMoves(){
   var h='';for(var i=0;i<S.sans.length;i+=2){h+=(i/2+1)+'. <b>'+S.sans[i]+'</b> '+(S.sans[i+1]?'<b>'+S.sans[i+1]+'</b> ':'')+' ';}
   el.innerHTML=h;el.scrollTop=el.scrollHeight;
 }
+function renderNav(){
+  var n=S?S.moves.length:0,at=rv===null?n:rv;
+  $('nFirst').disabled=$('nBack').disabled=n===0||at<=0;
+  $('nFwd').disabled=$('nLast').disabled=n===0||at>=n;
+  $('nPos').textContent=n?(rv===null?'Live':'Move '+rv+'/'+n):'';
+}
+function goView(k){
+  if(!S||!S.moves.length)return;
+  var n=S.moves.length,at=rv===null?n:rv,t=k==='first'?0:k==='last'?n:at+k;
+  t=Math.max(0,Math.min(n,t));sel=-1;drag=null;rv=t>=n?null:t;render();
+}
+$('nFirst').onclick=function(){goView('first');};
+$('nBack').onclick=function(){goView(-1);};
+$('nFwd').onclick=function(){goView(1);};
+$('nLast').onclick=function(){goView('last');};
+document.addEventListener('keydown',function(e){
+  if(e.target&&/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
+  if(e.key==='ArrowLeft'){goView(-1);}else if(e.key==='ArrowRight'){goView(1);}
+});
 function renderButtons(){
   var live=S&&!S.over,my=live&&S.G.t===S.human&&!busy;
   $('bUndo').disabled=!live||S.moves.length<2||busy;
@@ -226,7 +253,7 @@ function renderButtons(){
 function idxFromPoint(x,y){var el=document.elementFromPoint(x,y);while(el&&!(el.classList&&el.classList.contains('sq')))el=el.parentElement;return el?+el.dataset.i:-1;}
 boardEl.addEventListener('contextmenu',function(e){e.preventDefault();});
 boardEl.addEventListener('pointerdown',function(e){
-  if(!S||S.over)return;var i=idxFromPoint(e.clientX,e.clientY);if(i<0)return;var s=sqAt(i);
+  if(!S||S.over)return;if(rv!==null){toast('Viewing an earlier move – tap ⏭ to return');return;}var i=idxFromPoint(e.clientX,e.clientY);if(i<0)return;var s=sqAt(i);
   if(busy||S.G.t!==S.human){if(busy)toast('Wait for '+botName(S.level)+'…');return;}
   var p=S.G.b[s];
   if(sel>=0&&sel!==s){ // second tap: try the move
@@ -296,7 +323,7 @@ $('bUndo').onclick=function(){
   var go=function(){
     var n=S.G.t===S.human?2:1;if(S.moves.length<n)return;
     var mv=S.moves.slice(0,S.moves.length-n),r=E.replay(mv);if(!r)return;
-    S.moves=mv;S.G=r.G;S.keys=r.keys;S.sans=r.sans;S.lastMove=mv.length?mv[mv.length-1]:null;S.token=null;S.ranked=false;S.unrankedWhy='Undo was used';sel=-1;S.running=S.tc.b>0&&mv.length>=2;S.last=performance.now();render();persist();
+    S.moves=mv;S.G=r.G;S.keys=r.keys;S.sans=r.sans;S.lastMove=mv.length?mv[mv.length-1]:null;S.token=null;S.ranked=false;S.unrankedWhy='Undo was used';sel=-1;rv=null;S.running=S.tc.b>0&&mv.length>=2;S.last=performance.now();render();persist();
   };
   if(S.ranked)confirmBox('Take back your move?','Using Undo makes this game casual: no points or leaderboard result.','Undo anyway',go);else go();
 };

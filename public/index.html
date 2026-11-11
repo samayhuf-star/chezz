@@ -45,6 +45,7 @@ main{width:100%;max-width:640px;padding:0 12px 28px}
 #status{width:var(--bs);margin:8px auto 4px;min-height:24px;text-align:center;font-weight:700;font-size:15px}
 #status.think{color:var(--warn)}#status.over{color:var(--ac)}
 .acts{width:var(--bs);margin:6px auto;display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.nav{display:flex;align-items:center;gap:8px;margin:8px 0 2px}.nav .btn{flex:1;flex-direction:row;justify-content:center;font-size:16px;padding:8px 4px}.nav .btn:disabled{opacity:.35}#nPos{min-width:78px;text-align:center;color:var(--mut);font-size:13px;font-weight:600}
 .btn{background:var(--card2);padding:10px 4px;border-radius:11px;font-size:13px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:2px}
 .btn span{font-size:17px}
 .btn:disabled{opacity:.35;cursor:default}
@@ -142,6 +143,13 @@ input:focus{outline:2px solid var(--ac);border-color:transparent}
       <button class="btn" id="bDraw"><span>½</span>Draw</button>
       <button class="btn" id="bFlip"><span>⇅</span>Flip</button>
       <button class="btn" id="bRes"><span>⚑</span>Resign</button>
+    </div>
+    <div class="nav" aria-label="Review moves">
+      <button class="btn" id="nFirst" aria-label="First position">⏮</button>
+      <button class="btn" id="nBack" aria-label="Previous move">◀</button>
+      <span id="nPos"></span>
+      <button class="btn" id="nFwd" aria-label="Next move">▶</button>
+      <button class="btn" id="nLast" aria-label="Back to current position">⏭</button>
     </div>
     <div id="moves">Moves will appear here.</div>
     <div class="note">Win = Level × 10 points · Draw = Level × 4. Ranked games are re-played and verified by the server. Undo and Hint make a game unranked. <a href="#" id="mute" style="color:var(--ac)">Sound: on</a></div>
