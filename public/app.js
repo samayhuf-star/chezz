@@ -498,6 +498,10 @@ function renderAcct(){
     el.innerHTML='<h3>Account</h3><p class="sub" style="white-space:normal;margin:0">Signed in as '+esc(d.email)+'</p><button class="ghost" id="acOut" style="margin-top:10px">Sign out</button>';
   }
   $('acOut').onclick=signOut;
+  var dl=document.createElement('button');dl.className='ghost';dl.id='acDel';dl.textContent='Delete my account';dl.style.color='var(--bad)';el.appendChild(dl);
+  dl.onclick=function(){confirmBox('Delete account?','This permanently deletes your account, stats and leaderboard entry. It cannot be undone.','Delete forever',async function(){
+    try{await api('auth',{mode:'delete',id:me.id,secret:me.secret});me=null;ls(KEY.me,null);ls(KEY.game,null);S=null;refreshMe(true);render();toast('Account deleted');authModal(newGameModal);}catch(e){toast(e.message);}
+  });};
 }
 var LVN=function(l){return botName(l);};
 function renderPerf(){

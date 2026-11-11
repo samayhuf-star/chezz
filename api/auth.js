@@ -14,6 +14,13 @@ module.exports = L.handler('POST', async (req, res, b) => {
     await L.savePlayer(doc);
     return reply(res, doc, secret);
   }
+  if (mode === 'delete') { // permanent account deletion (App Store requirement for apps with account creation)
+    const doc = await L.loadPlayer(b.id);
+    if (!L.authOK(doc, b.secret)) return res.status(403).json({ error: 'Not signed in' });
+    if (doc.email) await L.store.delJSON(L.emailKey(doc.email));
+    await L.store.delJSON('players/' + doc.id + '.json');
+    return res.status(200).json({ deleted: true });
+  }
   const email = String(b.email || '').trim().toLowerCase();
   if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Enter a valid email address' });
   const pw = String(b.password || '');

@@ -9,6 +9,7 @@ import { usePro } from './src/purchases';
 import { api, apiEnabled } from './src/api';
 import { load, save, loadSecret, saveSecret } from './src/storage';
 import { NAMES, TCS, fmt, rid } from './src/levels';
+import { AuthSheet, PerfCard } from './src/Auth';
 import { C, S } from './src/theme';
 import { FREE_LEVELS, PRIVACY_URL, SUPPORT_EMAIL } from './src/config';
 
@@ -23,8 +24,8 @@ export default function App() {
   const [sel, setSel] = useState(-1), [flip, setFlip] = useState(false), [hint, setHint] = useState(null);
   const [modal, setModal] = useState(null); // 'new' | 'end' | {promo:[...]}
   const [paywall, setPaywall] = useState(null), [thinking, setThinking] = useState(false), [endNote, setEndNote] = useState('');
-  const [pref, setPref] = useState({ level: 5, color: 'w', tc: 5, tier: 0 }), [profile, setProfile] = useState(null);
-  const [resume, setResume] = useState(null), [armed, setArmed] = useState(false), [rv, setRv] = useState(null);
+  const [pref, setPref] = useState({ level: 5, color: 'w', tc: 0, tier: 0 }), [profile, setProfile] = useState(null);
+  const [resume, setResume] = useState(null), [armed, setArmed] = useState(false), [rv, setRv] = useState(null), [auth, setAuth] = useState(null);
   const billing = usePro();
 
   /* ---------- boot ---------- */
@@ -32,7 +33,7 @@ export default function App() {
     const p = await load('pref'); if (p) setPref(p);
     const doc = await load('me'), secret = await loadSecret();
     if (doc && secret) { me.current = { id: doc.id, secret, doc }; setProfile(doc); }
-    const g = await load('game'); if (g && g.moves && g.moves.length >= 2) setResume(g); else setModal('new');
+    const g = await load('game'); if (g && g.moves && g.moves.length >= 2) setResume(g); else if (doc && secret) setModal('new'); else setAuth('choose');
     retryPending();
   })(); }, []);
   useEffect(() => { const sub = AppState.addEventListener('change', s => { if (s !== 'active') persist(); else retryPending(); }); return () => sub.remove(); }, []);
@@ -45,7 +46,7 @@ export default function App() {
     setFlip(o.human === -1); setSel(-1); setRv(null); setHint(null); setModal(null); setEndNote(''); setTab('play'); rerender(); persist();
     if (o.human === -1) botTurn();
   };
-  const liveClk = g => { const c = g.clk.slice(); if (g.running && g.G.t === g.human) c[sIdx(g.human)] -= Date.now() - g.last; return c; };
+  const liveClk = g => { const c = g.clk.slice(); if (g.running && g.G.t === g.human) c[sIdx(g.human)] -= Date.now() - g.last; else if (g.running && g.botT0) c[sIdx(-g.human)] = Math.max(1000, c[sIdx(-g.human)] - (Date.now() - g.botT0)); return c; };
   const persist = () => { const g = game.current; if (!g || g.over) return save('game', null); save('game', { level: g.level, human: g.human, g: g.g, token: g.token, ranked: g.ranked, tc: g.tc, clk: liveClk(g), moves: g.moves, t0: g.t0, saved: Date.now(), drawAsked: g.drawAsked }); };
   const restore = d => {
     const r = E.replay(d.moves); if (!r) { save('game', null); return setModal('new'); }
@@ -74,13 +75,14 @@ export default function App() {
   };
   const botTurn = async () => {
     const g = game.current; if (!g || g.over) return;
-    g.busy = true; const ply = g.moves.length, t = setTimeout(() => setThinking(true), 250);
+    g.busy = true; const ply = g.moves.length, t = setTimeout(() => setThinking(true), 250), t0 = Date.now(); g.botT0 = t0;
     const m = await bot.current.think(g.moves.slice(), g.level, E.botSeed(g.g, ply));
+    const wait = 1000 - (Date.now() - t0); if (wait > 0) await new Promise(r => setTimeout(r, wait)); // the bot never replies faster than 1 second
     clearTimeout(t); setThinking(false);
     if (game.current !== g || g.over || g.moves.length !== ply) return;
-    g.busy = false; if (!m) return;
+    g.busy = false; g.botT0 = 0; if (!m) return;
     const cap = g.G.b[(m >> 7) & 127] !== 0 || ((m >> 17) & 2);
-    if (g.tc.b && g.moves.length >= 2) g.clk[sIdx(-g.human)] = Math.max(1000, g.clk[sIdx(-g.human)] - (400 + g.level * 45)); // bot never flags
+    if (g.tc.b && g.moves.length >= 2) g.clk[sIdx(-g.human)] = Math.max(1000, g.clk[sIdx(-g.human)] - (Date.now() - t0)); // the bot's clock really runs; it never flags
     applyMove(g, m); afterMove(g, false, cap);
   };
   const checkFlag = () => { const g = game.current; if (g && !g.over && g.running && g.G.t === g.human && liveClk(g)[sIdx(g.human)] <= 0) finish(g, 'l', 'You ran out of time', 'timeout'); };
@@ -109,6 +111,9 @@ export default function App() {
   };
   const removePending = async tok => { const p = ((await load('pending', [])) || []).filter(x => x.token !== tok); await save('pending', p.length ? p : null); };
   const retryPending = async () => { const p = (await load('pending', [])) || []; for (const c of p) await sendClaim(c, false); };
+  const onAuthed = async j => { me.current = { id: j.id, secret: j.secret, doc: j.doc }; await saveSecret(j.secret); await saveDoc(j.doc); const had = auth; setAuth(null); if (had === 'choose' || had === 'in') setModal('new'); };
+  const signOut = () => Alert.alert('Sign out?', profile && !profile.email ? 'You are a guest – signing out will lose this guest account and its stats. Create an account first to keep them.' : 'You can sign back in any time with your email and password.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Sign out', style: 'destructive', onPress: async () => { game.current = null; await save('game', null); await save('me', null); await saveSecret(''); me.current = null; setProfile(null); rerender(); setAuth('choose'); } }]);
+  const deleteAcct = () => Alert.alert('Delete account?', 'This permanently deletes your account, stats and leaderboard entry. It cannot be undone.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete forever', style: 'destructive', onPress: async () => { try { await api('auth', { mode: 'delete', id: me.current.id, secret: me.current.secret }); game.current = null; await save('game', null); await save('me', null); await saveSecret(''); me.current = null; setProfile(null); rerender(); setAuth('choose'); } catch (e) { Alert.alert('Could not delete', e.message); } } }]);
   const saveDoc = async doc => { me.current = { ...me.current, doc }; setProfile(doc); await save('me', doc); };
 
   /* ---------- input ---------- */
@@ -158,7 +163,7 @@ export default function App() {
   const begin = async p => {
     if (p.level > FREE_LEVELS && !billing.pro) return setPaywall('Levels ' + (FREE_LEVELS + 1) + '–50 are part of Chezz Pro.');
     setPref(p); save('pref', p);
-    const human = p.color === 'w' ? 1 : p.color === 'b' ? -1 : Math.random() < .5 ? 1 : -1, tc = TCS[p.tc];
+    const human = p.color === 'w' ? 1 : p.color === 'b' ? -1 : Math.random() < .5 ? 1 : -1, tc = TCS[0];
     const o = { level: p.level, human, tc: { b: tc.b, i: tc.i }, g: rid(), token: null };
     if (me.current && apiEnabled()) { try { const n = await api('new', { id: me.current.id, secret: me.current.secret, level: p.level, human, base: tc.b, inc: tc.i }); o.g = n.g; o.token = n.token; } catch (e) { if (e.status === 429) Alert.alert('Take a break', e.message); } }
     startGame(o);
@@ -215,8 +220,9 @@ export default function App() {
         </ScrollView>)}
 
       {tab === 'rank' && <Rankings profile={profile} />}
-      {tab === 'me' && <Profile profile={profile} me={me} setProfile={setProfile} saveDoc={saveDoc} pro={billing.pro} openPaywall={() => setPaywall('')} restore={billing.restore} />}
+      {tab === 'me' && <Profile profile={profile} me={me} setProfile={setProfile} saveDoc={saveDoc} openAuth={setAuth} signOut={signOut} deleteAcct={deleteAcct} pro={billing.pro} openPaywall={() => setPaywall('')} restore={billing.restore} />}
 
+      <AuthSheet visible={!!auth} start={auth === 'up' ? 'up' : auth === 'in' ? 'in' : 'choose'} me={me.current} onDone={onAuthed} onClose={() => setAuth(null)} />
       <NewGame visible={modal === 'new'} pref={pref} profile={profile} pro={billing.pro} onClose={() => setModal(null)} onStart={begin} />
       <Modal visible={modal === 'end'} transparent animationType="fade" onRequestClose={() => setModal(null)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(5,7,10,.75)', justifyContent: 'center', padding: 16 }}>
@@ -279,7 +285,7 @@ function NewGame({ visible, pref, profile, pro, onClose, onStart }) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}><ScrollView contentContainerStyle={{ padding: 16, paddingTop: Platform.OS === 'android' ? 44 : 16 }}>
         <Text style={S.h2}>New game</Text>
-        <Text style={[S.mut, { marginVertical: 6 }]}>{profile ? 'Ranked: your result is verified and counts for the leaderboard.' : 'You are not signed in – this will be a casual game. Create a profile to rank.'}</Text>
+        <Text style={[S.mut, { marginVertical: 6 }]}>{profile ? 'Ranked: your result is verified, counts for the leaderboard and is added to your stats.' : 'You are not signed in – this will be a casual game. Create a profile to rank.'}</Text>
         <View style={{ flexDirection: 'row', gap: 5, marginVertical: 8 }}>
           {E.TIERS.map((tr, i) => <Pressable key={i} onPress={() => setP({ ...p, tier: i, level: Math.min(Math.max(p.level, tr.from), tr.to) })} style={{ flex: 1, backgroundColor: p.tier === i ? '#233a34' : C.card2, borderRadius: 10, paddingVertical: 7, alignItems: 'center', borderWidth: 2, borderColor: p.tier === i ? C.ac : 'transparent' }}><Text style={{ fontSize: 16 }}>{tr.icon}</Text><Text style={{ color: p.tier === i ? C.tx : C.mut, fontSize: 10, fontWeight: '700' }} numberOfLines={1}>{tr.name}</Text></Pressable>)}
         </View>
@@ -292,8 +298,7 @@ function NewGame({ visible, pref, profile, pro, onClose, onStart }) {
         </View>
         <Text style={S.label}>PLAY AS</Text>
         <View style={{ flexDirection: 'row', gap: 6 }}>{[['w', '♔ White'], ['r', '🎲 Random'], ['b', '♚ Black']].map(([k, l]) => <Pressable key={k} onPress={() => setP({ ...p, color: k })} style={[S.btn, { borderWidth: 2, borderColor: p.color === k ? C.ac : 'transparent', backgroundColor: p.color === k ? '#233a34' : C.card2 }]}><Text style={S.btnT}>{l}</Text></Pressable>)}</View>
-        <Text style={S.label}>TIME CONTROL</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{TCS.map((x, i) => <Pressable key={i} onPress={() => setP({ ...p, tc: i })} style={{ paddingVertical: 9, paddingHorizontal: 12, borderRadius: 10, backgroundColor: p.tc === i ? '#233a34' : C.card2, borderWidth: 2, borderColor: p.tc === i ? C.ac : 'transparent' }}><Text style={S.btnT}>{x.n}</Text></Pressable>)}</View>
+        <Text style={[S.mut, { marginTop: 12 }]}>⏱ Every game: 7 minutes each side</Text>
         <Pressable disabled={go} style={[S.big, { marginTop: 18, opacity: go ? .6 : 1 }]} onPress={async () => { setGo(true); await onStart(p); setGo(false); }}><Text style={S.bigT}>{p.level > FREE_LEVELS && !pro ? '👑 Unlock to play ' : 'Play '}{NAMES[p.level - 1]} (Level {p.level})</Text></Pressable>
         <Pressable style={S.ghost} onPress={onClose}><Text style={S.ghostT}>Cancel</Text></Pressable>
       </ScrollView></SafeAreaView>
@@ -325,7 +330,7 @@ function Rankings({ profile }) {
     </ScrollView>);
 }
 
-function Profile({ profile, me, setProfile, saveDoc, pro, openPaywall, restore }) {
+function Profile({ profile, me, setProfile, saveDoc, openAuth, signOut, deleteAcct, pro, openPaywall, restore }) {
   const d = profile || { points: 0, w: 0, l: 0, d: 0, beaten: [] };
   const [f, setF] = useState({ name: d.name || '', city: d.city || '', state: d.state || '', country: d.country || '' }), [msg, setMsg] = useState('');
   useEffect(() => { setF({ name: d.name || '', city: d.city || '', state: d.state || '', country: d.country || '' }); }, [profile && profile.id]);
@@ -343,6 +348,13 @@ function Profile({ profile, me, setProfile, saveDoc, pro, openPaywall, restore }
       <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16, marginBottom: 8 }}>Your player card</Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>{[['points', 'Points'], ['w', 'Wins'], ['d', 'Draws'], ['l', 'Losses']].map(([k, l]) => <View key={k} style={{ flex: 1, backgroundColor: C.card2, borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}><Text style={{ color: C.tx, fontSize: 20, fontWeight: '800' }}>{d[k] | 0}</Text><Text style={S.mut}>{l}</Text></View>)}</View></View>
       <Pressable onPress={openPaywall} style={[S.card, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}><Text style={{ color: pro ? C.ac : C.gold, fontWeight: '800' }}>{pro ? '👑 Chezz Pro is active' : '👑 Get Chezz Pro – unlock Levels 11–50'}</Text>{!pro && <Text style={{ color: C.mut }}>›</Text>}</Pressable>
+      <PerfCard d={profile} />
+      <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16 }}>{!profile ? 'Account' : profile.email ? 'Account' : 'Guest account'}</Text>
+        <Text style={[S.mut, { marginTop: 4 }]}>{!profile ? 'You are not signed in.' : profile.email ? 'Signed in as ' + profile.email : 'Your stats live on this device only. Add an email and password to keep them and sign in anywhere.'}</Text>
+        {profile && !profile.email && <Pressable style={[S.big, { marginTop: 10 }]} onPress={() => openAuth('up')}><Text style={S.bigT}>Create account</Text></Pressable>}
+        {(!profile || !profile.email) && <Pressable style={S.ghost} onPress={() => openAuth('in')}><Text style={S.ghostT}>{profile ? 'Sign in to an existing account' : 'Sign in or play as guest'}</Text></Pressable>}
+        {!!profile && <Pressable style={S.ghost} onPress={signOut}><Text style={S.ghostT}>Sign out</Text></Pressable>}
+        {!!profile && <Pressable style={S.ghost} onPress={deleteAcct}><Text style={[S.ghostT, { color: C.bad }]}>Delete my account</Text></Pressable>}</View>
       <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16 }}>Who are you & where do you play from?</Text><Text style={S.mut}>Your name and place put you on the city, state, country and worldwide leaderboards.</Text>
         {inp('name', 'Display name', 'e.g. Aarav')}{inp('city', 'City', 'e.g. Ghaziabad')}{inp('state', 'State / Region', 'e.g. Uttar Pradesh')}{inp('country', 'Country', 'e.g. India')}
         <Pressable style={[S.big, { marginTop: 8 }]} onPress={saveP}><Text style={S.bigT}>Save profile</Text></Pressable><Text style={[S.mut, { textAlign: 'center', marginTop: 8 }]}>{msg}</Text></View>

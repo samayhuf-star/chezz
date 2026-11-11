@@ -45,4 +45,10 @@ async function listJSON(prefix, cap) {
   }
   return out;
 }
-module.exports = { getJSON, putJSON, listJSON };
+async function delJSON(path) {
+  if (D1()) { await D1().prepare('DELETE FROM kv WHERE k = ?').bind(path).run(); return; }
+  if (isMem()) { mem.delete(path); return; }
+  const { del } = require('@vercel/blob');
+  try { await del(path); } catch (e) {}
+}
+module.exports = { getJSON, putJSON, listJSON, delJSON };

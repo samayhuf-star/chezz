@@ -14,4 +14,6 @@ const call=(m,body,q)=>new Promise(r=>{const res={status(c){this.c=c;return this
  const st=JSON.parse(Buffer.from(n.o.token.split('.')[0],'base64url').toString());ok('clock forced to 7:00',st.tc[0]===420&&st.tc[1]===0);
  for(let i=0;i<8;i++)await call('auth',{mode:'login',email:'a@b.co',password:'nope-nope'});
  l=await call('auth',{mode:'login',email:'a@b.co',password:'longenough1'});ok('lockout after repeated failures',l.c===429);
+ l=await call('auth',{mode:'delete',id:g.o.id,secret:g.o.secret});ok('delete account',l.c===200&&l.o.deleted);
+ l=await call('auth',{mode:'login',email:'a@b.co',password:'longenough1'});ok('deleted account cannot sign in',l.c===401);
  console.log(bad?'FAILED':'all passed');process.exit(bad?1:0);})();
