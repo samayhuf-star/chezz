@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, ScrollView, Modal, TextInput, Alert, AppState, SafeAreaView, Share, StatusBar, ActivityIndicator, Platform, Linking } from 'react-native';
+import { Image, View, Text, Pressable, ScrollView, Modal, TextInput, Alert, AppState, SafeAreaView, Share, StatusBar, ActivityIndicator, Platform, Linking } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import * as E from './src/engine';
 import Board from './src/Board';
@@ -201,7 +201,7 @@ export default function App() {
           </View>
           <View style={[S.card, { margin: 10, maxHeight: 74 }]}><ScrollView><Text style={{ color: C.mut, fontSize: 13, lineHeight: 20 }}>{g && g.sans.length ? g.sans.map((s, i) => (i % 2 === 0 ? (i / 2 + 1) + '. ' : '') + s + ' ').join('') : 'Moves will appear here.'}</Text></ScrollView></View>
           <Text style={[S.mut, { textAlign: 'center', marginHorizontal: 18 }]}>Win = Level × 10 points · Draw = Level × 4. Ranked results are verified by the server. Undo and Hint make a game casual.</Text>
-          {!billing.pro && <Pressable onPress={() => setPaywall('')} style={{ margin: 14, padding: 12, borderRadius: 14, backgroundColor: C.card, alignItems: 'center' }}><Text style={{ color: C.gold, fontWeight: '800' }}>👑 Unlock Levels 11–50 with Chezz Pro</Text></Pressable>}
+          {!billing.pro && <Pressable onPress={() => setPaywall('')} style={{ margin: 14, overflow: 'hidden', padding: 12, borderRadius: 14, backgroundColor: C.card, alignItems: 'center' }}><Image source={require('./assets/art/paywall.jpg')} style={{ width: '100%', height: 120, borderRadius: 10, marginBottom: 8 }} resizeMode="cover" /><Text style={{ color: C.gold, fontWeight: '800' }}>👑 Unlock Levels 11–50 with Chezz Pro</Text></Pressable>}
         </ScrollView>)}
 
       {tab === 'rank' && <Rankings profile={profile} />}
@@ -303,6 +303,7 @@ function Rankings({ profile }) {
   })(); }, [scope, profile && profile.id]);
   return (
     <ScrollView contentContainerStyle={{ padding: 12 }}>
+      <Image source={require('./assets/art/trophy.jpg')} style={{ width: '100%', height: 150, borderRadius: 16, marginBottom: 10 }} resizeMode="cover" accessibilityLabel="Leaderboard trophy" />
       <View style={{ flexDirection: 'row', gap: 6, marginBottom: 10 }}>{[['city', 'My City'], ['state', 'My State'], ['country', 'Country'], ['world', 'Worldwide']].map(([k, l]) => <Pressable key={k} onPress={() => setScope(k)} style={[S.btn, { backgroundColor: scope === k ? C.ac : C.card }]}><Text style={[S.btnT, { color: scope === k ? '#06261c' : C.mut }]}>{l}</Text></Pressable>)}</View>
       {rows === null ? <ActivityIndicator color={C.ac} /> : rows.map((r, i) => (
         <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.card, borderRadius: 12, padding: 10, marginBottom: 6, borderWidth: profile && profile.id === r.id ? 2 : 0, borderColor: C.ac }}>

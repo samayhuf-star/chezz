@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, Pressable, ScrollView, ActivityIndicator, Linking, Platform } from 'react-native';
+import { Image, Modal, View, Text, Pressable, ScrollView, ActivityIndicator, Linking, Platform } from 'react-native';
 import { C, S } from './theme';
 import { PRIVACY_URL, TERMS_URL } from './config';
 import { storeReady } from './purchases';
@@ -19,7 +19,7 @@ export default function Paywall({ visible, onClose, billing, reason }) {
       <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: 54 }}>
         <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
           <Pressable onPress={() => onClose(false)} style={{ alignSelf: 'flex-end', padding: 8 }} accessibilityLabel="Close"><Text style={{ color: C.mut, fontSize: 24 }}>✕</Text></Pressable>
-          <Text style={{ fontSize: 46, textAlign: 'center' }}>👑</Text>
+          <Image source={require('../assets/art/pro-sparkle.gif')} style={{ width: 160, height: 160, borderRadius: 24, alignSelf: 'center', marginBottom: 6 }} accessibilityLabel="Chezz Pro crown" />
           <Text style={[S.h2, { textAlign: 'center', fontSize: 28 }]}>Chezz Pro</Text>
           <Text style={[S.mut, { textAlign: 'center', marginTop: 6, marginBottom: 18 }]}>{reason || 'Take on all 50 bots, from Beginner to Grandmaster Zero.'}</Text>
           <View style={S.card}>{PERKS.map(p => <Text key={p} style={{ color: C.tx, fontSize: 15, marginVertical: 5 }}>✓  {p}</Text>)}</View>
