@@ -30,3 +30,16 @@ The D1 database `chezz` already exists in the account (id is in `wrangler.jsonc`
 (or, from a terminal logged in with `wrangler login`: `npx wrangler secret put CHESS_SECRET && npx wrangler deploy`)
 
 Vercel also works (`api/` + `public/`, `@vercel/blob`).
+
+
+## Mobile app and legal
+
+The iOS and Android app lives in `mobile/`. See `mobile/README.md`.
+
+Copyright © 2026 Samay Vashsht.
+
+- Privacy: https://samayhuf-star.github.io/app-legal/chezz/privacy.html
+- Terms: https://samayhuf-star.github.io/app-legal/chezz/terms.html
+- Support: https://samayhuf-star.github.io/app-legal/chezz/support.html
+
+Contact: samayhuf@gmail.com only. Postal address: 2/61 Bhim Street, Vishwas Nagar, Delhi 110032, India.

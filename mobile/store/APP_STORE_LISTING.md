@@ -1,8 +1,12 @@
 # App Store / Play listing copy (ready to paste)
 **Name:** Chezz: Chess vs 50 Bots   **Subtitle:** Beat bots, climb the leaderboards
 **Category:** Games › Board (secondary: Strategy)   **Age rating:** 4+   **Price:** Free (in-app subscription)
-**Keywords:** chess,bots,ai,puzzle,board game,leaderboard,clock,blitz,strategy,offline
-**Support URL / contact:** samayhuf@gmail.com · +91 99537 10111   **Privacy URL:** https://samayhuf-star.github.io/chezz/privacy.html
+**Keywords:** chess,bots,puzzle,board game,leaderboard,clock,blitz,strategy,offline
+**Support URL:** https://samayhuf-star.github.io/app-legal/chezz/support.html
+**Privacy URL:** https://samayhuf-star.github.io/app-legal/chezz/privacy.html
+**Terms URL:** https://samayhuf-star.github.io/app-legal/chezz/terms.html
+**Contact:** samayhuf@gmail.com only
+**Copyright:** Samay Vashsht
 
 **Promotional text:** 50 bots. Real clocks. City, state, country and world leaderboards.
 
@@ -15,16 +19,11 @@ Play chess against 50 bots, from a friendly beginner to Grandmaster Zero. Every 
 • Share your games as PGN
 Levels 1–10 are free. Chezz Pro unlocks levels 11–50 and unlimited hints.
 
-**Subscription (Chezz Pro):** auto-renewing monthly and yearly plans; payment is charged to your Apple ID at confirmation of purchase; renews unless cancelled at least 24 hours before the end of the period; manage in Account Settings.
+**Subscription (Chezz Pro):** auto-renewing monthly and yearly plans. The price is shown in the app before you buy. Payment is charged to your Apple ID at confirmation of purchase; renews unless cancelled at least 24 hours before the end of the period; manage in Account Settings.
 
-**App Privacy (nutrition label):** Data linked to you: User ID (app functionality), Other user content: display name & location text you enter (app functionality). Purchases: via Apple/RevenueCat. No tracking.
+Product IDs: `chezz_pro_yearly` (1 year), `chezz_pro_monthly` (1 month). USA list prices as of 12 Nov 2026: $24.99 / year, $3.99 / month (shown in the app from the store).
+
+**App Privacy (nutrition label):** Data linked to you: User ID (app functionality), Other user content: display name and location text you enter (app functionality). Purchases: via Apple or Google. No tracking. No third-party purchase SDK.
 **Export compliance:** no non-exempt encryption (ITSAppUsesNonExemptEncryption = false).
 
-**App Review notes:** No login required. Levels 1–10 are playable immediately; Pro (levels 11–50) is gated by the RevenueCat entitlement `pro`. Tap "Restore purchases" in Profile to test restore.
-
-**In-App Purchases to create (Subscription group "Chezz Pro"):**
-| Product ID | Duration | Suggested price |
-|---|---|---|
-| chezz_pro_monthly | 1 month | $3.99 |
-| chezz_pro_yearly | 1 year | $24.99 |
-Attach both to the RevenueCat entitlement `pro` and to the **default** offering (monthly + annual packages).
+**App Review notes:** Guest play is available; email sign-in is optional. Levels 1–10 are playable immediately; Pro (levels 11–50) is gated by an App Store or Play subscription. Tap "Restore purchases" in Profile or on the paywall to test restore.

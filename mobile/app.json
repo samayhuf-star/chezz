@@ -17,7 +17,8 @@
       "bundleIdentifier": "com.samayvashsht.chezz",
       "supportsTablet": false,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSHumanReadableCopyright": "Copyright © 2026 Samay Vashsht"
       }
     },
     "android": {
@@ -31,13 +32,23 @@
     },
     "plugins": [
       "expo-secure-store",
-      "expo-build-properties"
+      "expo-build-properties",
+      "expo-iap",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#16181d",
+          "imageWidth": 200,
+          "resizeMode": "contain"
+        }
+      ]
     ],
+    "owner": "krosz",
     "extra": {
       "eas": {
-        "projectId": "69ad94bf-9867-4e74-9af4-2a1d760c5215"
+        "projectId": "8840ee7d-b7da-4235-912b-f5db88bbe46b"
       }
-    },
-    "owner": "kroszs-team"
+    }
   }
 }

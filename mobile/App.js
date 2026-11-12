@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, View, Text, Pressable, ScrollView, Modal, TextInput, Alert, AppState, SafeAreaView, Share, StatusBar, ActivityIndicator, Platform, Linking } from 'react-native';
+import { AccessibilityInfo, Image, View, Text, Pressable, ScrollView, Modal, TextInput, Alert, AppState, SafeAreaView, Share, StatusBar, ActivityIndicator, Platform, Linking } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import * as SplashScreen from 'expo-splash-screen';
 import * as E from './src/engine';
 import Board from './src/Board';
 import BotWorker from './src/BotWorker';
@@ -12,6 +13,8 @@ import { NAMES, TCS, fmt, rid } from './src/levels';
 import { AuthSheet, PerfCard } from './src/Auth';
 import { C, S } from './src/theme';
 import { FREE_LEVELS, PRIVACY_URL, SUPPORT_EMAIL } from './src/config';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const GLYPH = { 1: '♟', 2: '♞', 3: '♝', 4: '♜', 5: '♛', 6: '♚' };
 const sIdx = t => (t === 1 ? 0 : 1);
@@ -27,8 +30,16 @@ export default function App() {
   const [pref, setPref] = useState({ level: 5, color: 'w', tc: 0, tier: 0 }), [profile, setProfile] = useState(null);
   const [resume, setResume] = useState(null), [armed, setArmed] = useState(false), [rv, setRv] = useState(null), [auth, setAuth] = useState(null);
   const billing = usePro();
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   /* ---------- boot ---------- */
+  // Hide the splash as soon as the UI is mounted. Never wait on StoreKit.
+  useEffect(() => {
+    SplashScreen.hideAsync().catch(() => {});
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(() => {});
+    const motion = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => motion.remove();
+  }, []);
   useEffect(() => { (async () => {
     const p = await load('pref'); if (p) setPref(p);
     const doc = await load('me'), secret = await loadSecret();
@@ -62,7 +73,7 @@ export default function App() {
     if (byHuman && g.running) g.clk[sIdx(g.human)] -= Date.now() - g.last;
     if (g.tc.b && g.moves.length > 2) g.clk[sIdx(side)] += g.tc.i * 1000;
     g.last = Date.now(); g.running = g.tc.b > 0 && g.moves.length >= 2;
-    Haptics.impactAsync(E.inCheck(g.G) ? Haptics.ImpactFeedbackStyle.Heavy : cap ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (!reduceMotion) Haptics.impactAsync(E.inCheck(g.G) ? Haptics.ImpactFeedbackStyle.Heavy : cap ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setHint(null); rerender(); persist();
     const o = E.outcome(g.G, g.keys);
     if (o) finish(g, o.r === 'd' ? 'd' : ((o.r === 'w') === (g.human === 1) ? 'w' : 'l'), o.why, null);
@@ -88,7 +99,7 @@ export default function App() {
   const checkFlag = () => { const g = game.current; if (g && !g.over && g.running && g.G.t === g.human && liveClk(g)[sIdx(g.human)] <= 0) finish(g, 'l', 'You ran out of time', 'timeout'); };
   const finish = (g, r, why, end) => {
     if (g.over) return; g.over = { r, why, end }; g.running = false; save('game', null);
-    Haptics.notificationAsync(r === 'w' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    if (!reduceMotion) Haptics.notificationAsync(r === 'w' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning).catch(() => {});
     let claim = null;
     if (g.ranked && g.token && me.current && g.moves.length >= 1 && end !== 'abort') {
       claim = { id: me.current.id, secret: me.current.secret, token: g.token, moves: g.moves.slice() };
@@ -129,7 +140,7 @@ export default function App() {
       const cand = E.legalMoves(gm.G, false).filter(m => (m & 127) === sel && ((m >> 7) & 127) === s);
       if (cand.length > 1) { setSel(-1); return setModal({ promo: cand }); }
       if (cand.length === 1) { setSel(-1); return humanMove(cand[0]); }
-      if (!mine) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {}); const why = p && !mine ? 'That move is not allowed.' : E.inCheck(gm.G) ? 'You are in check – get out of check first.' : E.gen(gm.G, false).some(m => (m & 127) === sel && ((m >> 7) & 127) === s) ? 'That would leave your king in check.' : 'That move is not allowed.'; setSel(-1); return Alert.alert('Illegal move', why); }
+      if (!mine) { if (!reduceMotion) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {}); const why = p && !mine ? 'That move is not allowed.' : E.inCheck(gm.G) ? 'You are in check – get out of check first.' : E.gen(gm.G, false).some(m => (m & 127) === sel && ((m >> 7) & 127) === s) ? 'That would leave your king in check.' : 'That move is not allowed.'; setSel(-1); return Alert.alert('Illegal move', why); }
     }
     setSel(mine ? s : -1);
   };
@@ -223,8 +234,8 @@ export default function App() {
       {tab === 'me' && <Profile profile={profile} me={me} setProfile={setProfile} saveDoc={saveDoc} openAuth={setAuth} signOut={signOut} deleteAcct={deleteAcct} pro={billing.pro} openPaywall={() => setPaywall('')} restore={billing.restore} />}
 
       <AuthSheet visible={!!auth} start={auth === 'up' ? 'up' : auth === 'in' ? 'in' : 'choose'} me={me.current} onDone={onAuthed} onClose={() => setAuth(null)} />
-      <NewGame visible={modal === 'new'} pref={pref} profile={profile} pro={billing.pro} onClose={() => setModal(null)} onStart={begin} />
-      <Modal visible={modal === 'end'} transparent animationType="fade" onRequestClose={() => setModal(null)}>
+      <NewGame visible={modal === 'new'} pref={pref} profile={profile} pro={billing.pro} reduceMotion={reduceMotion} onClose={() => setModal(null)} onStart={begin} />
+      <Modal visible={modal === 'end'} transparent animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={() => setModal(null)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(5,7,10,.75)', justifyContent: 'center', padding: 16 }}>
           <View style={{ backgroundColor: C.card, borderRadius: 18, padding: 18 }}>
             <Text style={S.h2}>{g && g.over ? (g.over.r === 'w' ? '🏆 You won!' : g.over.r === 'l' ? 'You lost' : 'Draw') : ''}</Text>
@@ -236,7 +247,7 @@ export default function App() {
             <Pressable style={S.ghost} onPress={() => setModal(null)}><Text style={S.ghostT}>View board</Text></Pressable>
           </View></View>
       </Modal>
-      <Modal visible={!!(modal && modal.promo)} transparent animationType="fade" onRequestClose={() => setModal(null)}>
+      <Modal visible={!!(modal && modal.promo)} transparent animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={() => setModal(null)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(5,7,10,.75)', justifyContent: 'center', padding: 16 }}>
           <View style={{ backgroundColor: C.card, borderRadius: 18, padding: 18 }}>
             <Text style={S.h2}>Promote to</Text>
@@ -248,7 +259,7 @@ export default function App() {
             <Pressable style={S.ghost} onPress={() => setModal(null)}><Text style={S.ghostT}>Cancel</Text></Pressable>
           </View></View>
       </Modal>
-      <Paywall visible={paywall !== null} reason={paywall} billing={billing} onClose={ok => setPaywall(null)} />
+      <Paywall visible={paywall !== null} reason={paywall} billing={billing} reduceMotion={reduceMotion} onClose={ok => setPaywall(null)} />
     </SafeAreaView>
   );
 }
@@ -277,12 +288,12 @@ function Btn({ t, onPress, off, pri, danger }) {
   return <Pressable disabled={off} onPress={onPress} style={[S.btn, { opacity: off ? .35 : 1, backgroundColor: danger ? C.bad : pri ? C.ac : C.card2, paddingHorizontal: 2 }]}><Text style={[S.btnT, { fontSize: 11.5, color: pri ? '#06261c' : C.tx }]} numberOfLines={1} adjustsFontSizeToFit>{t}</Text></Pressable>;
 }
 
-function NewGame({ visible, pref, profile, pro, onClose, onStart }) {
+function NewGame({ visible, pref, profile, pro, onClose, onStart, reduceMotion }) {
   const [p, setP] = useState(pref); const [go, setGo] = useState(false);
   useEffect(() => { if (visible) { setP(pref); setGo(false); } }, [visible]);
   const t = E.TIERS[p.tier], beaten = (profile && profile.beaten) || [];
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}><ScrollView contentContainerStyle={{ padding: 16, paddingTop: Platform.OS === 'android' ? 44 : 16 }}>
         <Text style={S.h2}>New game</Text>
         <Text style={[S.mut, { marginVertical: 6 }]}>{profile ? 'Ranked: your result is verified, counts for the leaderboard and is added to your stats.' : 'You are not signed in – this will be a casual game. Create a profile to rank.'}</Text>
