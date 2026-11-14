@@ -6,15 +6,27 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "environment": "development",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://chezz.samayhuf.workers.dev",
+        "EXPO_PUBLIC_PRIVACY_URL": "https://chezz.samayhuf.workers.dev/privacy.html"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "environment": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://chezz.samayhuf.workers.dev",
+        "EXPO_PUBLIC_PRIVACY_URL": "https://chezz.samayhuf.workers.dev/privacy.html"
+      }
     },
     "production": {
       "autoIncrement": true,
+      "environment": "production",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://chezz.samayhuf.workers.dev"
+        "EXPO_PUBLIC_API_URL": "https://chezz.samayhuf.workers.dev",
+        "EXPO_PUBLIC_PRIVACY_URL": "https://chezz.samayhuf.workers.dev/privacy.html"
       }
     }
   },

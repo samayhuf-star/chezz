@@ -11,7 +11,7 @@ import { load, save, loadSecret, saveSecret } from './src/storage';
 import { NAMES, TCS, fmt, rid } from './src/levels';
 import { AuthSheet, PerfCard } from './src/Auth';
 import { C, S } from './src/theme';
-import { FREE_LEVELS, PRIVACY_URL, SUPPORT_EMAIL } from './src/config';
+import { FREE_LEVELS, PRIVACY_URL, TERMS_URL, SUPPORT_URL } from './src/config';
 
 const GLYPH = { 1: '♟', 2: '♞', 3: '♝', 4: '♜', 5: '♛', 6: '♚' };
 const sIdx = t => (t === 1 ? 0 : 1);
@@ -360,10 +360,11 @@ function Profile({ profile, me, setProfile, saveDoc, openAuth, signOut, deleteAc
         <Pressable style={[S.big, { marginTop: 8 }]} onPress={saveP}><Text style={S.bigT}>Save profile</Text></Pressable><Text style={[S.mut, { textAlign: 'center', marginTop: 8 }]}>{msg}</Text></View>
       <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16, marginBottom: 8 }}>Levels beaten</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>{Array.from({ length: 50 }, (_, i) => i + 1).map(l => { const b = (d.beaten || []).indexOf(l) >= 0; return <View key={l} style={{ width: '9.2%', paddingVertical: 5, borderRadius: 8, alignItems: 'center', backgroundColor: b ? '#233a34' : C.card2, opacity: b ? 1 : .55 }}><Text style={{ color: b ? C.ac : C.tx, fontWeight: '800', fontSize: 12 }}>{l}</Text></View>; })}</View></View>
-      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 18, marginTop: 6 }}>
-        <Pressable onPress={() => restore().then(r => Alert.alert(r.ok ? 'Restored' : 'Nothing to restore', r.ok ? 'Chezz Pro is active.' : r.error || 'No purchases were found for this account.'))}><Text style={{ color: C.ac, fontWeight: '700' }}>Restore purchases</Text></Pressable>
-        <Pressable onPress={() => Linking.openURL(PRIVACY_URL)}><Text style={S.mut}>Privacy</Text></Pressable>
-        <Pressable onPress={() => Linking.openURL('mailto:' + SUPPORT_EMAIL)}><Text style={S.mut}>Support</Text></Pressable>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 14, marginTop: 6 }}>
+        <Pressable onPress={() => restore().then(r => Alert.alert(r.ok ? 'Restored' : 'Nothing to restore', r.ok ? 'Chezz Pro is active.' : r.error || 'No purchases were found for this account.'))}><Text style={{ color: C.ac, fontWeight: '700' }}>Restore Purchases</Text></Pressable>
+        <Pressable onPress={() => Linking.openURL(TERMS_URL)}><Text style={S.mut}>Terms of Use (EULA)</Text></Pressable>
+        <Pressable onPress={() => Linking.openURL(PRIVACY_URL)}><Text style={S.mut}>Privacy Policy</Text></Pressable>
+        <Pressable onPress={() => Linking.openURL(SUPPORT_URL)}><Text style={S.mut}>Support</Text></Pressable>
       </View>
     </ScrollView>);
 }
