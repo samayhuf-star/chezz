@@ -1,7 +1,7 @@
 import { API_URL } from './config';
 export const apiEnabled = () => !!API_URL;
 export async function api(path, body, method = 'POST') {
-  if (!API_URL) { const e = new Error('Online rankings are not available yet'); e.status = 0; e.offline = true; throw e; }
+  if (!API_URL) { const e = new Error('This build has no game server URL, so ranked results cannot be submitted.'); e.status = 0; e.offline = true; throw e; }
   let r;
   try { r = await fetch(API_URL + '/api/' + path, { method, headers: { 'Content-Type': 'application/json' }, body: method === 'GET' ? undefined : JSON.stringify(body) }); }
   catch (err) { const e = new Error('You appear to be offline'); e.status = 0; e.offline = true; throw e; }

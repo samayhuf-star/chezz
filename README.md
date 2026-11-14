@@ -3,8 +3,8 @@
 Play chess against **50 bot levels** with real clocks, and climb the city, state, country and world leaderboards.
 
 ## Features
-- 50 bots in 5 tiers (Beginner → Master). Bots answer instantly: the engine runs in a Web Worker with a fixed node budget instead of a timer.
-- Time controls: no clock, 1, 3, 5, 10, 30 min and 3|2, 10|5, 15|10 increments. Clocks start after both first moves; flagging loses the game.
+- 50 bots in 5 tiers (Beginner → Master). The engine runs off the UI thread with a fixed node budget. Replies are paced to about one second so the clock is real.
+- Time control: 7 minutes each side. Clocks start after both first moves; flagging loses the game.
 - Guardrails: confirm-to-resign, free abort before move 2, illegal-move feedback with the reason, confirm before Undo/Hint (which make a game casual), draw offers the bot judges honestly, automatic draws (repetition, 50-move, stalemate, insufficient material), leave-page warning, resume after refresh (time away counts against your clock), offline results retried later.
 - Drag-and-drop or tap-to-move, promotion picker, SAN move list, captured pieces, sound, PGN copy.
 - Points: win = Level × 10, draw = Level × 4.
@@ -23,10 +23,62 @@ node test/perft.js && node test/api.js && node test/arena.js
 ```
 
 ## Deploy on Cloudflare (one Worker for site + API)
-The D1 database `chezz` already exists in the account (id is in `wrangler.jsonc`, table `kv` created).
-1. Dashboard: Workers & Pages → Create → Import a repository → `samayhuf-star/chezz`. Build command empty, deploy command `npx wrangler deploy`.
-2. Worker → Settings → Variables and Secrets → add secret `CHESS_SECRET` (any long random string).
-3. Open the `*.workers.dev` URL. Put that URL in Expo as `EXPO_PUBLIC_API_URL` for the mobile app.
-(or, from a terminal logged in with `wrangler login`: `npx wrangler secret put CHESS_SECRET && npx wrangler deploy`)
+The Worker serves `public/` and `/api/*`. Ranked games are stored in the D1 database named `chezz` (id in `wrangler.jsonc`, table `kv` from `schema.sql`).
 
-Vercel also works (`api/` + `public/`, `@vercel/blob`).
+```
+npm ci
+# one-time, if this account does not already have that D1 database:
+#   npx wrangler d1 create chezz
+# then put the printed database_id into wrangler.jsonc. Do not invent an id.
+openssl rand -base64 32   # copy the value; do not commit it
+export CHESS_SECRET='paste-that-value'
+npm run deploy            # schema, wrangler deploy, then the secret
+```
+
+`npm run deploy:local` applies `schema.sql` to local D1 and runs `wrangler dev`. It expects a gitignored `.dev.vars` containing `CHESS_SECRET=...`.
+
+Accounts and secrets this deploy needs (none of these are in the repo):
+
+| What | Where it goes | Notes |
+|---|---|---|
+| Cloudflare account | `npx wrangler login`, or `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` | The token needs Workers and D1 edit on the account that owns database `chezz`. |
+| `CHESS_SECRET` | Worker secret, via the deploy script | Long random string. Signs game tickets. The API returns "Server not configured" until it is set. |
+| D1 database `chezz` | `database_id` already in `wrangler.jsonc` | Create it with `wrangler d1 create chezz` only if that id is not in this account, then commit the new id. |
+
+Mobile builds read `EXPO_PUBLIC_API_URL` (set in `mobile/eas.json` to `https://chezz.samayhuf.workers.dev`). Privacy and support pages are the same origin: `/privacy.html`, `/terms.html`, `/support.html`.
+
+### Alternate: Vercel
+`api/` plus `public/` also run on Vercel, with storage in Vercel Blob instead of D1. From a linked Vercel project:
+
+```
+npx vercel deploy --prod
+```
+
+Set these in the Vercel project (do not commit them): `CHESS_SECRET`, and `BLOB_READ_WRITE_TOKEN` from a Blob store. Leave `STORE` unset. Point `EXPO_PUBLIC_API_URL` at that deployment if you use this path instead of the Worker.
+
+## First iOS build
+From `mobile/`:
+
+```
+npx eas-cli build --platform ios --profile production
+```
+
+`eas.json` uses remote app versioning, and the production profile has `autoIncrement`. The Expo account owner in `app.json` is `krosz`. The iOS bundle id and Android package are `com.samayvashsht.chezz`.
+
+Set these on the EAS **production** environment before that build. They are RevenueCat public SDK keys (the values that start with `appl_` and `goog_`), not the RevenueCat secret API key. Do not commit them:
+
+```
+npx eas-cli env:create --name EXPO_PUBLIC_RC_IOS_KEY --value <RevenueCat Apple SDK key> --environment production --visibility sensitive
+npx eas-cli env:create --name EXPO_PUBLIC_RC_ANDROID_KEY --value <RevenueCat Google SDK key> --environment production --visibility sensitive
+```
+
+`EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_PRIVACY_URL` are already set in `mobile/eas.json`.
+
+The paywall reads the current RevenueCat offering. Create these auto-renewable products and attach both to the RevenueCat entitlement `pro` and to that offering (monthly package and annual package):
+
+| Store | Product ID | Period | Intended US price |
+|---|---|---|---|
+| App Store Connect, subscription group Chezz Pro | `chezz_pro_monthly` | 1 month | $3.99 |
+| App Store Connect, subscription group Chezz Pro | `chezz_pro_yearly` | 1 year | $24.99 |
+| Play Console | `chezz_pro_monthly` | monthly base plan | $3.99 |
+| Play Console | `chezz_pro_yearly` | yearly base plan | $24.99 |

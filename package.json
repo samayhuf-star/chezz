@@ -2,6 +2,10 @@
   "name": "chezz",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "deploy": "bash scripts/deploy-cloudflare.sh",
+    "deploy:local": "bash scripts/deploy-cloudflare.sh --local"
+  },
   "dependencies": {
     "@vercel/blob": "^1.0.0"
   },
