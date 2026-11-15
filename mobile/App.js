@@ -10,7 +10,7 @@ import { api, apiEnabled } from './src/api';
 import { load, save, loadSecret, saveSecret } from './src/storage';
 import { NAMES, TCS, fmt, rid } from './src/levels';
 import { AuthSheet, PerfCard } from './src/Auth';
-import { C, S } from './src/theme';
+import { C, S, setScheme } from './src/theme';
 import { FREE_LEVELS, PRIVACY_URL, TERMS_URL, SUPPORT_URL } from './src/config';
 import Puzzles from './src/Puzzles';
 import Review from './src/Review';
@@ -34,14 +34,14 @@ export default function App() {
   const [paywall, setPaywall] = useState(null), [thinking, setThinking] = useState(false), [endNote, setEndNote] = useState('');
   const [pref, setPref] = useState({ level: 5, color: 'w', tc: 0, tier: 0 }), [profile, setProfile] = useState(null);
   const [resume, setResume] = useState(null), [armed, setArmed] = useState(false), [rv, setRv] = useState(null), [auth, setAuth] = useState(null);
-  const [settings, setSettings] = useState({ sound: true, haptics: true, theme: 'classic' }), [review, setReview] = useState(null), [playStreak, setPlayStreak] = useState(0), [lastGame, setLastGame] = useState(null);
+  const [settings, setSettings] = useState({ sound: true, haptics: true, theme: 'classic', scheme: 'dark' }), [review, setReview] = useState(null), [playStreak, setPlayStreak] = useState(0), [lastGame, setLastGame] = useState(null);
   const billing = usePro();
-  const applySettings = async n => { setSettings(n); hap.on = n.haptics; setSoundEnabled(n.sound); await save('settings', n); };
+  const applySettings = async n => { setScheme(n.scheme); setSettings(n); hap.on = n.haptics; setSoundEnabled(n.sound); await save('settings', n); };
 
   /* ---------- boot ---------- */
   useEffect(() => { (async () => {
     initSound();
-    const st = await load('settings'); if (st) { setSettings(s => ({ ...s, ...st })); hap.on = st.haptics !== false; setSoundEnabled(st.sound !== false); }
+    const st = await load('settings'); if (st) { setScheme(st.scheme); setSettings(s => ({ ...s, ...st })); hap.on = st.haptics !== false; setSoundEnabled(st.sound !== false); }
     setPlayStreak((await readStreak('play')).count); setLastGame(await load('lastGame'));
     const p = await load('pref'); if (p) setPref(p);
     const doc = await load('me'), secret = await loadSecret();
@@ -200,7 +200,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle={settings.scheme === 'light' ? 'dark-content' : 'light-content'} />
       <BotWorker ref={bot} />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingTop: Platform.OS === 'android' ? 34 : 6, paddingBottom: 6 }}>
         <Text style={{ color: C.tx, fontWeight: '800', fontSize: 19 }}>♞ Chezz</Text>
@@ -270,7 +270,7 @@ export default function App() {
       <View style={{ flexDirection: 'row', backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.line, paddingBottom: Platform.OS === 'ios' ? 14 : 6 }}>
         {[['play', '♞', 'Play'], ['puzzles', '🧩', 'Puzzles'], ['rank', '🏆', 'Rankings'], ['me', '👤', 'Profile']].map(([k, ic, l]) => (
           <Pressable key={k} onPress={() => setTab(k)} accessibilityRole="tab" accessibilityState={{ selected: tab === k }} style={{ flex: 1, alignItems: 'center', paddingVertical: 8 }}>
-            <Text style={{ fontSize: 20, opacity: tab === k ? 1 : .55 }}>{ic}</Text>
+            <Text style={{ fontSize: 20, color: tab === k ? C.ac : C.mut, opacity: tab === k ? 1 : .7 }}>{ic}</Text>
             <Text style={{ color: tab === k ? C.ac : C.mut, fontWeight: '700', fontSize: 11, marginTop: 2 }}>{l}</Text></Pressable>))}
       </View>
       <Paywall visible={paywall !== null} reason={paywall} billing={billing} onClose={ok => setPaywall(null)} />
@@ -338,7 +338,7 @@ function Rankings({ profile }) {
     if ((scope === 'city' && !d.city) || (scope === 'state' && !d.state) || (scope !== 'world' && !d.country)) { setRows([]); return setNote('Add your place in the Profile tab to see this board.'); }
     try {
       const q = 'scope=' + scope + '&city=' + encodeURIComponent(d.city || '') + '&state=' + encodeURIComponent(d.state || '') + '&country=' + encodeURIComponent(d.country || '') + (d.id ? '&id=' + d.id : '');
-      const j = await api('leaderboard?' + q, null, 'GET'); setRows(j.rows); setNote(j.rank ? 'Your rank: #' + j.rank + ' of ' + j.total : j.total + ' players');
+      const j = await api('leaderboard?' + q, null, 'GET'); setRows(Array.isArray(j && j.rows) ? j.rows : []); setNote(j && j.rank ? 'Your rank: #' + j.rank + ' of ' + j.total : ((j && j.total) | 0) + ' players');
     } catch (e) { setRows([]); setNote(e.message); }
   })(); }, [scope, profile && profile.id]);
   return (
@@ -377,6 +377,8 @@ function Profile({ settings, applySettings, lastGame, openReview, profile, me, s
         {[['sound', 'Sound effects'], ['haptics', 'Haptic feedback']].map(([k, l]) => (
           <Pressable key={k} onPress={() => applySettings({ ...settings, [k]: !settings[k] })} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 }}>
             <Text style={{ color: C.tx }}>{l}</Text><Text style={{ color: settings[k] ? C.ac : C.mut, fontWeight: '800' }}>{settings[k] ? 'On' : 'Off'}</Text></Pressable>))}
+        <Pressable onPress={() => applySettings({ ...settings, scheme: settings.scheme === 'light' ? 'dark' : 'light' })} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 }}>
+          <Text style={{ color: C.tx }}>Appearance</Text><Text style={{ color: C.ac, fontWeight: '800' }}>{settings.scheme === 'light' ? 'Light' : 'Dark'}</Text></Pressable>
         <Text style={S.label}>BOARD THEME</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {THEMES.map(t => (
