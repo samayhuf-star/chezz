@@ -7,7 +7,9 @@ Play chess against **50 bot levels** with real clocks, and climb the city, state
 - Time control: 7 minutes each side. Clocks start after both first moves; flagging loses the game.
 - Guardrails: confirm-to-resign, free abort before move 2, illegal-move feedback with the reason, confirm before Undo/Hint (which make a game casual), draw offers the bot judges honestly, automatic draws (repetition, 50-move, stalemate, insufficient material), leave-page warning, resume after refresh (time away counts against your clock), offline results retried later.
 - Drag-and-drop or tap-to-move, promotion picker, SAN move list, captured pieces, sound, PGN copy.
-- Points: win = Level × 10, draw = Level × 4.
+- Points: win = Level × 10, draw = Level × 4. A rating (Elo-style, starts at 800) is tracked on the server alongside points.
+- Mobile app extras: real piece art (Chessnut, Apache 2.0) with move animation, move/capture/check/end sounds, post-game **review** (move grades, best-move highlight, accuracy, eval chart), **puzzles** (223 mate-in-1/2 puzzles, daily puzzle, streak), a face for each of the 50 bots, 6 board themes (2 free, 4 Pro), play and puzzle streaks, sound and haptics settings.
+- Regenerate assets: `node mobile/scripts/gen-sfx.js`, `node mobile/scripts/gen-puzzles.js`. Tests: `node test/features.js`. See `docs/THIRD_PARTY.md` for asset licences.
 
 ## How ranked results are protected
 The bot is deterministic: `think(position, level, seed)` always returns the same move, and the seed comes from a server-signed game ticket. When a game ends the browser sends the move list to `/api/claim`; the server re-plays every move for legality, derives checkmate/stalemate/draw itself, re-computes a random sample of the bot's moves (always the first), rate-limits claims, and accepts each ticket only once.

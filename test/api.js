@@ -21,6 +21,7 @@ const call=(m,body,q)=>new Promise(r=>{const res={status(c){this.c=c;return this
   gm.moves.length; // elapsed check needs time: patch ts by waiting is slow, so lower via many moves allowed
   let c=await call('claim',{...auth,token:gm.token,moves:gm.moves});
   ok('lost game recorded (speed check only guards wins/draws)',c.c===200&&c.o.result==='l');
+  ok('rating is tracked and drops after a loss',c.c===200&&typeof c.o.ratingChange==='number'&&c.o.doc.rating<=800);
   c=await call('claim',{...auth,token:gm.token,moves:gm.moves});ok('replay claim blocked',c.c===409);
   // fake bot move
   let g2=await game(5,1,8);const bm=g2.moves.slice();
