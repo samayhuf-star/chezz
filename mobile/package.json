@@ -5,6 +5,8 @@
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~58.0.25",
+    "expo-asset": "~58.0.21",
+    "expo-audio": "~58.0.12",
     "expo-build-properties": "~58.0.12",
     "expo-dev-client": "~58.0.20",
     "expo-haptics": "~58.0.8",
@@ -17,6 +19,7 @@
     "react-native": "0.88.1",
     "react-native-purchases": "^11.0.1",
     "react-native-safe-area-context": "~5.11.1",
+    "react-native-svg": "15.16.0",
     "react-native-webview": "14.0.1"
   },
   "scripts": {
@@ -25,10 +28,13 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "embed-engine": "node scripts/embed-engine.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "expo lint"
   },
   "private": true,
   "devDependencies": {
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~58.0.4",
     "typescript": "~6.0.3"
   }
 }

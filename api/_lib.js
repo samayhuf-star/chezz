@@ -44,7 +44,7 @@ const emailKey = e => 'emails/' + sha(String(e).trim().toLowerCase()) + '.json';
 const blankStats = () => ({ lv: {}, white: { w: 0, l: 0, d: 0 }, black: { w: 0, l: 0, d: 0 }, streak: 0, bestStreak: 0, plies: 0, secs: 0, timeouts: 0, resigns: 0, recent: [] });
 const statsOf = d => Object.assign(blankStats(), d.stats || {});
 const publicDoc = d => ({ id: d.id, name: d.name, city: d.city, state: d.state, country: d.country,
-  points: d.points | 0, w: d.w | 0, l: d.l | 0, d: d.d | 0, best: d.best | 0, games: d.games | 0, beaten: d.beaten || [] });
+  points: d.points | 0, w: d.w | 0, l: d.l | 0, d: d.d | 0, best: d.best | 0, games: d.games | 0, beaten: d.beaten || [], rating: (d.rating | 0) || 800 });
 
 /* Re-check a finished game. Returns {ok, error, result:'w'|'l'|'d', reason, plies}. */
 function verifyGame(st, c) {

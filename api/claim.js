@@ -15,6 +15,13 @@ module.exports = L.handler('POST', async (req, res, b) => {
   const long = v.plies >= 4;
   const pts = long ? (v.result === 'w' ? st.l * 10 : v.result === 'd' ? st.l * 4 : 0) : 0;
   doc.points = (doc.points | 0) + pts; doc.games = (doc.games | 0) + 1;
+  // Elo-style rating against the bot's rating (level 1 = 450 ... level 50 = 2900). Only games of 4+ plies count.
+  let dr = 0;
+  if (long) {
+    const R = (doc.rating | 0) || 800, botR = 400 + st.l * 50, exp = 1 / (1 + Math.pow(10, (botR - R) / 400));
+    const sc = v.result === 'w' ? 1 : v.result === 'd' ? 0.5 : 0, K = (doc.games | 0) <= 30 ? 40 : 24;
+    doc.rating = Math.max(100, Math.round(R + K * (sc - exp))); dr = doc.rating - R;
+  }
   if (v.result === 'w') {
     doc.w = (doc.w | 0) + 1; doc.beaten = doc.beaten || [];
     if (long && !doc.beaten.includes(st.l)) doc.beaten.push(st.l);
@@ -26,11 +33,11 @@ module.exports = L.handler('POST', async (req, res, b) => {
   S.bestStreak = Math.max(S.bestStreak | 0, S.streak);
   S.plies += v.plies; S.secs += Math.min(7200, Math.round(elapsed / 1000));
   if (b.end === 'timeout') S.timeouts++; if (b.end === 'resign') S.resigns++;
-  S.recent = [{ l: st.l, r: k, why: v.reason, c: st.h === 1 ? 'w' : 'b', p: v.plies, pts, ts: Date.now() }].concat(S.recent).slice(0, 20);
+  S.recent = [{ l: st.l, r: k, why: v.reason, c: st.h === 1 ? 'w' : 'b', p: v.plies, pts, dr, ts: Date.now() }].concat(S.recent).slice(0, 20);
   doc.stats = S;
   doc.claimed.push({ g: st.g, ts: Date.now() });
   doc.claimed = doc.claimed.filter(c => Date.now() - c.ts < 3 * 24 * 3600 * 1000).slice(-200);
   doc.updated = Date.now();
   await L.savePlayer(doc);
-  res.status(200).json({ awarded: pts, result: v.result, reason: v.reason, doc: L.myDoc(doc) });
+  res.status(200).json({ awarded: pts, ratingChange: dr, result: v.result, reason: v.reason, doc: L.myDoc(doc) });
 });

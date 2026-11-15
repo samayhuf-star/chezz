@@ -266,6 +266,27 @@ function think(G,level,seed){
   }
   return best;
 }
+/* Fixed-budget analysis for game review and puzzles. Separate from think(): bot moves are unchanged.
+   Returns {move, score, all:[[score,move],...]} from the side to move's point of view (centipawns, mates near +-MATE). */
+function analyze(G,depth,budget){
+  var moves=legalMoves(G,false);
+  if(!moves.length)return {move:0,score:inCheck(G)?-MATE:0,all:[]};
+  nodes=0;limit=budget;USEQ=true;killers=[];hist.fill(0);
+  var base=G.st.length,ordered=orderMoves(G,moves.slice(),0,0),best=ordered[0],all=[],d,i,m,sc;
+  for(d=1;d<=depth;d++){
+    try{
+      var o=orderMoves(G,ordered,0,best),cur=[];
+      for(i=0;i<o.length;i++){m=o[i];make(G,m);sc=-ab(G,d-1,-INF,INF,1,true);unmake(G);cur.push([sc,m]);}
+      cur.sort(function(a,b){return b[0]-a[0];});
+      all=cur;best=cur[0][1];ordered=cur.map(function(x){return x[1];});
+    }catch(e){
+      if(e!=='T')throw e;
+      while(G.st.length>base)unmake(G);
+      break;
+    }
+  }
+  return {move:best,score:all.length?all[0][0]:0,all:all};
+}
 /* bot's reply to a draw offer made on the human's turn (deterministic, cheap) */
 function botAcceptsDraw(G,level,plyCount){
   if(plyCount<20)return false;
@@ -334,6 +355,6 @@ function replay(moves){
 function botSeed(gameId,ply){return hashStr(gameId+':'+ply);}
 
 return {LEVELS:LEVELS,LV:LV,TIERS:TIERS,tierOf:tierOf,newGame:newGame,setupFEN:setupFEN,attacked:attacked,gen:gen,make:make,unmake:unmake,
-  inCheck:inCheck,legalMoves:legalMoves,perft:perft,evaluate:evaluate,think:think,botAcceptsDraw:botAcceptsDraw,posKey:posKey,
+  inCheck:inCheck,legalMoves:legalMoves,perft:perft,evaluate:evaluate,think:think,analyze:analyze,botAcceptsDraw:botAcceptsDraw,posKey:posKey,
   outcome:outcome,san:san,fen:fen,moveName:moveName,sqName:sqName,replay:replay,botSeed:botSeed,hashStr:hashStr,MATE:MATE};
 });
