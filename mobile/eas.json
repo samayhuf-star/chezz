@@ -28,6 +28,14 @@
         "EXPO_PUBLIC_API_URL": "https://chezz.samayhuf.workers.dev",
         "EXPO_PUBLIC_PRIVACY_URL": "https://chezz.samayhuf.workers.dev/privacy.html"
       }
+    },
+    "simulator": {
+      "extends": "preview",
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      },
+      "environment": "preview"
     }
   },
   "submit": {
