@@ -7,9 +7,12 @@
     "deploy:local": "bash scripts/deploy-cloudflare.sh --local"
   },
   "dependencies": {
-    "@vercel/blob": "^1.0.0"
+    "@vercel/blob": "^1.0.0",
+    "chess.js": "^1.4.0",
+    "stockfish": "^19.0.1"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "wrangler": "^4.160.0"
   }
 }

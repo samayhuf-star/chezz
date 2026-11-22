@@ -4,6 +4,13 @@ import newGame from '../api/new.js';
 import claim from '../api/claim.js';
 import leaderboard from '../api/leaderboard.js';
 import auth from '../api/auth.js';
+import sfFactory from './sf-factory.mjs';
+import sfWasm from './sf.wasm';
+import core from '../core/index.js';
+// A fresh Stockfish per claim: the wasm module is compiled once by the runtime, instantiating it is cheap.
+globalThis.__SF_MAKE = () => core.createDriver(core.moduleLink(sfFactory, {
+  instantiateWasm(imports, done) { const inst = new WebAssembly.Instance(sfWasm, imports); done(inst, sfWasm); return inst.exports; },
+}));
 const routes = { '/api/profile': profile, '/api/new': newGame, '/api/claim': claim, '/api/leaderboard': leaderboard, '/api/auth': auth };
 
 export default {

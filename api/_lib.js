@@ -1,10 +1,11 @@
 const crypto = require('crypto');
-const E = require('../public/engine.js');
+const E = require('../core');
+const engine = require('./_engine.js');
 const store = require('./_store.js');
 
 const SECRET = () => process.env.CHESS_SECRET || '';
 const TOKEN_TTL = 24 * 3600 * 1000;
-const VERIFY_NODE_BUDGET = 450000; // max total search nodes spent re-checking bot moves per claim
+const VERIFY_NODE_BUDGET = 1200000; // max total Stockfish nodes spent re-checking bot moves per claim
 
 function sign(obj) {
   const p = Buffer.from(JSON.stringify(obj)).toString('base64url');
@@ -46,50 +47,38 @@ const statsOf = d => Object.assign(blankStats(), d.stats || {});
 const publicDoc = d => ({ id: d.id, name: d.name, city: d.city, state: d.state, country: d.country,
   points: d.points | 0, w: d.w | 0, l: d.l | 0, d: d.d | 0, best: d.best | 0, games: d.games | 0, beaten: d.beaten || [], rating: (d.rating | 0) || 800 });
 
-/* Re-check a finished game. Returns {ok, error, result:'w'|'l'|'d', reason, plies}. */
-function verifyGame(st, c) {
+/* Re-check a finished game. Returns {ok, error, result:'w'|'l'|'d', reason, plies}. Moves are UCI strings. */
+async function verifyGame(st, c) {
   const moves = c.moves;
-  if (!Array.isArray(moves) || moves.length < 1 || moves.length > 600) return { error: 'Bad move list' };
+  if (!Array.isArray(moves) || moves.length < 1 || moves.length > 600 || !moves.every(E.validUci)) return { error: 'Bad move list' };
   const rep = E.replay(moves);
   if (!rep) return { error: 'Illegal move in game' };
-  const { G, keys } = rep;
-  const human = st.h; // 1 = white
-  // game must have started with the right side: bot opens when human is black (checked by replay order)
-  const rule = E.outcome(G, keys);
-  let result, reason;
-  const sideRes = r => r === 'd' ? 'd' : ((r === 'w') === (human === 1) ? 'w' : 'l');
-  if (rule) { result = sideRes(rule.r); reason = rule.why; }
-  else if (c.end === 'resign') {
-    if (G.t !== human && moves.length % 2 === (human === 1 ? 0 : 1)) { /* resigned on bot's turn is odd but allowed */ }
-    result = 'l'; reason = 'Resigned';
-  } else if (c.end === 'timeout') { result = 'l'; reason = 'Lost on time'; }
+  const human = st.h, humanSide = human === 1 ? 'w' : 'b'; // st.h: 1 = human plays white
+  const rule = E.outcome(rep.chess);
+  let result, reason, eng = null;
+  const sf = () => eng || (eng = engine()); // one engine per claim
+  if (rule) { result = rule.r === 'd' ? 'd' : rule.r === humanSide ? 'w' : 'l'; reason = rule.why; }
+  else if (c.end === 'resign') { result = 'l'; reason = 'Resigned'; }
+  else if (c.end === 'timeout') { result = 'l'; reason = 'Lost on time'; }
   else if (c.end === 'draw') {
-    // bot must really have accepted: recompute its decision at the offer position
-    const at = c.drawAt | 0;
-    if (at !== moves.length || G.t !== human) return { error: 'Draw not valid' };
-    if (!E.botAcceptsDraw(G, st.l, moves.length)) return { error: 'Draw not accepted by bot' };
+    // the bot must really have accepted: ask Stockfish again at the offer position
+    if ((c.drawAt | 0) !== moves.length || rep.chess.turn() !== humanSide) return { error: 'Draw not valid' };
+    if (!(await E.botAcceptsDraw(sf(), moves, st.l))) return { error: 'Draw not accepted by bot' };
     result = 'd'; reason = 'Draw agreed';
   } else return { error: 'Game not finished' };
 
-  // who moved each ply: human moves on plies with parity matching colour
+  // the human moves on plies whose parity matches their colour; everything else must be the bot's own move
   const humanPly = i => (i % 2 === 0) === (human === 1);
-  // re-derive a sample of bot moves with the same deterministic engine
   const botPlies = []; for (let i = 0; i < moves.length; i++) if (!humanPly(i)) botPlies.push(i);
-  if (st.h === -1 && moves.length && humanPly(0)) return { error: 'Wrong side to move' };
-  const nodesPer = E.LV[st.l].nodes;
-  let n = Math.max(1, Math.min(botPlies.length, Math.floor(VERIFY_NODE_BUDGET / nodesPer)));
-  if (st.l <= 3) n = Math.min(botPlies.length, 12);
+  const n = Math.max(1, Math.min(botPlies.length, Math.floor(VERIFY_NODE_BUDGET / E.LV[st.l].nodes)));
   // random sample (server-side randomness so a cheater cannot predict which plies are checked); always include the first bot move
-  const chosen = new Set(botPlies.slice(0, 1));
-  const pool = botPlies.slice(1);
+  const chosen = new Set(botPlies.slice(0, 1)), pool = botPlies.slice(1);
   while (chosen.size < n && pool.length) { const k = crypto.randomInt(pool.length); chosen.add(pool.splice(k, 1)[0]); }
   for (const ply of chosen) {
-    const g2 = E.replay(moves.slice(0, ply)).G;
-    const want = E.think(g2, st.l, E.botSeed(st.g, ply));
+    const want = await E.botMove(sf(), moves.slice(0, ply), st.l, st.g);
     if (want !== moves[ply]) return { error: 'Bot move mismatch' };
   }
-  const humanMoves = moves.length - botPlies.length;
-  return { ok: true, result, reason, plies: moves.length, humanMoves };
+  return { ok: true, result, reason, plies: moves.length, humanMoves: moves.length - botPlies.length };
 }
 
 function handler(method, fn) {

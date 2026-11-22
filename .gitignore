@@ -3,3 +3,7 @@ node_modules
 /*.png
 .dev.vars
 .wrangler
+
+# local wrangler state
+.wrangler/
+.dev.vars
