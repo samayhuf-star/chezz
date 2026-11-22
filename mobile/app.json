@@ -26,7 +26,8 @@
             ]
           }
         ]
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "com.samayvashsht.chezz",
@@ -51,7 +52,8 @@
         }
       ],
       "expo-audio",
-      "expo-asset"
+      "expo-asset",
+      "expo-apple-authentication"
     ],
     "extra": {
       "eas": {

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, View, Text, Pressable, ScrollView, Modal, TextInput, AppState, SafeAreaView, Share, StatusBar, ActivityIndicator, Platform, Linking } from 'react-native';
+import { Image, View, Text, Pressable, ScrollView, Modal, AppState, SafeAreaView, Share, StatusBar, ActivityIndicator, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import * as K from './src/core';
 import Board from './src/Board';
@@ -9,17 +9,18 @@ import { usePro } from './src/purchases';
 import { api, apiEnabled } from './src/api';
 import { load, save, loadSecret, saveSecret } from './src/storage';
 import { NAMES, TCS, fmt, rid } from './src/levels';
-import { AuthSheet, PerfCard } from './src/Auth';
+import { AuthSheet } from './src/Auth';
 import { C, S, setScheme } from './src/theme';
-import { FREE_LEVELS, PRIVACY_URL, TERMS_URL, SUPPORT_URL } from './src/config';
+import { FREE_LEVELS } from './src/config';
 import Puzzles from './src/Puzzles';
 import Review from './src/Review';
 import Avatar from './src/Avatar';
 import { initSound, play, moveSound, setSoundEnabled } from './src/sound';
-import { THEMES, themeById } from './src/themes';
 import { bumpStreak, readStreak } from './src/streak';
 import { alert } from './src/alert';
 import Home from './src/Home';
+import BotPicker from './src/BotPicker';
+import Profile, { Settings } from './src/Profile';
 import Online from './src/Online';
 import Onboarding from './src/Onboarding';
 import Licences from './src/Licences';
@@ -36,7 +37,7 @@ const kingSq = chess => { if (!chess.isCheck()) return null; const t = chess.tur
 export default function App() {
   const bot = useRef(null), game = useRef(null), me = useRef(null), meCache = useRef(null);
   const [, force] = useState(0), rerender = useCallback(() => force(x => x + 1), []);
-  const [tab, setTab] = useState('home'), [onb, setOnb] = useState(false), [lic, setLic] = useState(false);
+  const [tab, setTab] = useState('home'), [onb, setOnb] = useState(false), [lic, setLic] = useState(false), [set, setSet] = useState(false);
   const [sel, setSel] = useState(null), [flip, setFlip] = useState(false), [hint, setHint] = useState(null);
   const [modal, setModal] = useState(null); // 'new' | 'end' | {promo:[...]}
   const [paywall, setPaywall] = useState(null), [thinking, setThinking] = useState(false), [endNote, setEndNote] = useState('');
@@ -138,7 +139,7 @@ export default function App() {
   const removePending = async tok => { const p = ((await load('pending', [])) || []).filter(x => x.token !== tok); await save('pending', p.length ? p : null); };
   const retryPending = async () => { const p = (await load('pending', [])) || []; for (const c of p) await sendClaim(c, false); };
   const onAuthed = async j => { me.current = { id: j.id, secret: j.secret, doc: j.doc }; await saveSecret(j.secret); await saveDoc(j.doc); setAuth(null); };
-  const signOut = () => alert('Sign out?', profile && !profile.email ? 'You are a guest – signing out will lose this guest account and its stats. Create an account first to keep them.' : 'You can sign back in any time with your email and password.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Sign out', style: 'destructive', onPress: async () => { game.current = null; await save('game', null); await save('me', null); await saveSecret(''); me.current = null; setProfile(null); rerender(); setAuth('choose'); } }]);
+  const signOut = () => alert('Sign out?', profile && profile.guest ? 'You are a guest – signing out will lose this guest account and its stats. Create an account first to keep them.' : 'You can sign back in any time.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Sign out', style: 'destructive', onPress: async () => { game.current = null; await save('game', null); await save('me', null); await saveSecret(''); me.current = null; setProfile(null); rerender(); setAuth('choose'); } }]);
   const deleteAcct = () => alert('Delete account?', 'This permanently deletes your account, stats and leaderboard entry. It cannot be undone.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete forever', style: 'destructive', onPress: async () => { try { await api('auth', { mode: 'delete', id: me.current.id, secret: me.current.secret }); game.current = null; await save('game', null); await save('me', null); await saveSecret(''); me.current = null; setProfile(null); rerender(); setAuth('choose'); } catch (e) { alert('Could not delete', e.message); } } }]);
   const saveDoc = async doc => { me.current = { ...me.current, doc }; setProfile(doc); await save('me', doc); };
 
@@ -224,9 +225,9 @@ export default function App() {
 
       {tab === 'play' && (
         <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
-          <PlayerBar icon={<Avatar level={lvl} size={30} />} name={NAMES[lvl - 1]} sub={'Lv ' + lvl} caps={botCol === 1 ? m.capW : m.capB} lead={g ? (g.human === 1 ? -m.diff : m.diff) : 0} clock={g && g.tc.b ? fmt(clk[bi]) : '--:--'} run={!!(g && g.running && !g.over && !myTurn(g))} />
+          <PlayerBar icon={<Avatar level={lvl} size={36} />} name={NAMES[lvl - 1]} sub={'Level ' + lvl + ' · Stockfish'} caps={botCol === 1 ? m.capW : m.capB} lead={g ? (g.human === 1 ? -m.diff : m.diff) : 0} clock={g && g.tc.b ? fmt(clk[bi]) : '--:--'} run={!!(g && g.running && !g.over && !myTurn(g))} />
           <Board fen={shown ? shown.fen() : START_FEN} check={shown ? kingSq(shown) : null} flip={flip} sel={viewing ? null : sel} targets={viewing ? null : targets} last={lastSq} hint={viewing ? null : hint} onTap={onTap} themeId={settings.theme} animate={!viewing} />
-          <PlayerBar icon="🙂" name={(profile && profile.name) || 'You'} badge={g && !g.over ? (g.ranked ? 'RANKED' : 'CASUAL') : ''} caps={g && g.human === -1 ? m.capB : m.capW} lead={g ? (g.human === 1 ? m.diff : -m.diff) : 0} clock={g && g.tc.b ? fmt(clk[mi]) : '--:--'} run={!!(g && g.running && !g.over && myTurn(g))} low={!!(g && g.tc.b && clk[mi] < 10000)} />
+          <PlayerBar icon={<View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.ac, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#06261c', fontWeight: '800', fontSize: 16 }}>{String((profile && profile.name) || 'Y')[0].toUpperCase()}</Text></View>} name={(profile && profile.name) || 'You'} sub={profile ? String((profile.rating | 0) || 800) : ''} badge={g && !g.over ? (g.ranked ? 'RANKED' : 'CASUAL') : ''} caps={g && g.human === -1 ? m.capB : m.capW} lead={g ? (g.human === 1 ? m.diff : -m.diff) : 0} clock={g && g.tc.b ? fmt(clk[mi]) : '--:--'} run={!!(g && g.running && !g.over && myTurn(g))} low={!!(g && g.tc.b && clk[mi] < 10000)} />
           <Text style={{ color: stCol, fontWeight: '700', textAlign: 'center', marginVertical: 8, minHeight: 22 }}>{viewing ? 'Viewing move ' + rv + ' of ' + nMoves + ' – tap ⏭ to return' : status}</Text>
           <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 10, alignItems: 'center', marginBottom: 6 }}>
             <Btn t="⏮" onPress={() => goView('first')} off={!nMoves || (viewing ? rv : nMoves) <= 0} /><Btn t="◀" onPress={() => goView(-1)} off={!nMoves || (viewing ? rv : nMoves) <= 0} />
@@ -234,8 +235,8 @@ export default function App() {
             <Btn t="▶" onPress={() => goView(1)} off={!viewing} /><Btn t="⏭" onPress={() => goView('last')} off={!viewing} />
           </View>
           <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 10 }}>
-            <Btn t="＋ New" onPress={newGameBtn} pri /><Btn t="↶ Undo" onPress={undo} off={!live || g.moves.length < 2} /><Btn t={billing.pro ? '💡 Hint' : '💡 Hint 👑'} onPress={hintNow} off={!live} />
-            <Btn t="½ Draw" onPress={offerDraw} off={!live || g.moves.length < 20} /><Btn t="⇅ Flip" onPress={() => setFlip(f => !f)} /><Btn t={armed ? 'Sure?' : g && g.moves.length < 2 ? '✕ Abort' : '⚑ Resign'} onPress={resign} off={!live} danger={armed} />
+            <Btn t="New" onPress={newGameBtn} pri /><Btn t="Undo" onPress={undo} off={!live || g.moves.length < 2} /><Btn t={billing.pro ? 'Hint' : 'Hint · Pro'} onPress={hintNow} off={!live} />
+            <Btn t="Draw" onPress={offerDraw} off={!live || g.moves.length < 20} /><Btn t="Flip" onPress={() => setFlip(f => !f)} /><Btn t={armed ? 'Sure?' : g && g.moves.length < 2 ? 'Abort' : 'Resign'} onPress={resign} off={!live} danger={armed} />
           </View>
           <View style={[S.card, { margin: 10, maxHeight: 74 }]}><ScrollView><Text style={{ color: C.mut, fontSize: 13, lineHeight: 20 }}>{g && g.sans.length ? g.sans.map((s, i) => (i % 2 === 0 ? (i / 2 + 1) + '. ' : '') + s + ' ').join('') : 'Moves will appear here.'}</Text></ScrollView></View>
           <Text style={[S.mut, { textAlign: 'center', marginHorizontal: 18 }]}>Win = Level × 10 points · Draw = Level × 4. Ranked results are verified by the server. Undo and Hint make a game casual.</Text>
@@ -247,10 +248,10 @@ export default function App() {
       {tab === 'online' && <Online me={me} profile={profile} saveDoc={saveDoc} pro={billing.pro} openPaywall={setPaywall} openAuth={setAuth} themeId={settings.theme} engine={bot} haptics={settings.haptics} />}
       {tab === 'puzzles' && <Puzzles themeId={settings.theme} pro={billing.pro} openPaywall={setPaywall} />}
       {tab === 'rank' && <Rankings profile={profile} />}
-      {tab === 'me' && <Profile settings={settings} applySettings={applySettings} lastGame={lastGame} openReview={setReview} profile={profile} me={me} setProfile={setProfile} saveDoc={saveDoc} openAuth={setAuth} signOut={signOut} deleteAcct={deleteAcct} pro={billing.pro} openPaywall={() => setPaywall('')} restore={billing.restore} openLicences={() => setLic(true)} />}
+      {tab === 'me' && <Profile profile={profile} playStreak={playStreak} pro={billing.pro} lastGame={lastGame} openReview={setReview} openAuth={setAuth} openPaywall={() => setPaywall('')} openSettings={() => setSet(true)} />}
 
       <AuthSheet visible={!!auth} start={auth === 'up' ? 'up' : auth === 'in' ? 'in' : 'choose'} me={me.current} onDone={onAuthed} onClose={() => setAuth(null)} />
-      <NewGame visible={modal === 'new'} pref={pref} profile={profile} pro={billing.pro} onClose={() => setModal(null)} onStart={begin} />
+      <BotPicker visible={modal === 'new'} pref={pref} profile={profile} pro={billing.pro} onClose={() => setModal(null)} onStart={begin} />
       <Modal visible={modal === 'end'} transparent animationType="fade" onRequestClose={() => setModal(null)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(5,7,10,.75)', justifyContent: 'center', padding: 16 }}>
           <View style={{ backgroundColor: C.card, borderRadius: 18, padding: 18 }}>
@@ -284,6 +285,7 @@ export default function App() {
             <Text style={{ color: on ? C.ac : C.mut, fontWeight: '700', fontSize: 11, marginTop: 2 }}>{l}</Text></Pressable>); })}
       </View>
       <Onboarding visible={onb} onDone={() => { save('onboarded', 1); setOnb(false); if (!me.current) setAuth('choose'); }} onPlans={() => { save('onboarded', 1); setOnb(false); setPaywall(''); }} />
+      <Settings visible={set} onClose={() => setSet(false)} settings={settings} applySettings={applySettings} profile={profile} me={me} saveDoc={saveDoc} pro={billing.pro} openPaywall={() => { setSet(false); setPaywall(''); }} restore={billing.restore} openAuth={setAuth} signOut={() => { setSet(false); signOut(); }} deleteAcct={() => { setSet(false); deleteAcct(); }} openLicences={() => setLic(true)} />
       <Licences visible={lic} onClose={() => setLic(false)} />
       <Paywall visible={paywall !== null} reason={paywall} billing={billing} onClose={ok => { setPaywall(null); if (!me.current && !auth) setAuth('choose'); }} />
     </SafeAreaView>
@@ -301,7 +303,7 @@ function PlayerBar({ icon, name, sub, badge, caps, lead, clock, run, low }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 7 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-        <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: C.card2, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>{typeof icon === 'string' ? <Text>{icon}</Text> : icon}</View>
+        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.card2, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>{icon}</View>
         <View style={{ marginLeft: 8, flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}><Text style={{ color: C.tx, fontWeight: '700', fontSize: 15 }} numberOfLines={1}>{name}</Text>{!!sub && <Text style={{ color: C.mut, marginLeft: 5, fontSize: 12 }}>{sub}</Text>}
             {!!badge && <Text style={{ marginLeft: 6, fontSize: 10, fontWeight: '800', color: badge === 'RANKED' ? C.ac : C.warn, backgroundColor: badge === 'RANKED' ? '#1f3b33' : '#3a3220', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10, overflow: 'hidden' }}>{badge}</Text>}</View>
@@ -312,34 +314,6 @@ function PlayerBar({ icon, name, sub, badge, caps, lead, clock, run, low }) {
 }
 function Btn({ t, onPress, off, pri, danger }) {
   return <Pressable disabled={off} onPress={onPress} style={[S.btn, { opacity: off ? .35 : 1, backgroundColor: danger ? C.bad : pri ? C.ac : C.card2, paddingHorizontal: 2 }]}><Text style={[S.btnT, { fontSize: 11.5, color: pri ? '#06261c' : C.tx }]} numberOfLines={1} adjustsFontSizeToFit>{t}</Text></Pressable>;
-}
-
-function NewGame({ visible, pref, profile, pro, onClose, onStart }) {
-  const [p, setP] = useState(pref); const [go, setGo] = useState(false);
-  useEffect(() => { if (visible) { setP(pref); setGo(false); } }, [visible]);
-  const t = K.TIERS[p.tier], beaten = (profile && profile.beaten) || [];
-  return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}><ScrollView contentContainerStyle={{ padding: 16, paddingTop: Platform.OS === 'android' ? 44 : 16 }}>
-        <Text style={S.h2}>New game</Text>
-        <Text style={[S.mut, { marginVertical: 6 }]}>{profile ? 'Ranked: your result is verified, counts for the leaderboard and is added to your stats.' : 'You are not signed in – this will be a casual game. Create a profile to rank.'}</Text>
-        <View style={{ flexDirection: 'row', gap: 5, marginVertical: 8 }}>
-          {K.TIERS.map((tr, i) => <Pressable key={i} onPress={() => setP({ ...p, tier: i, level: Math.min(Math.max(p.level, tr.from), tr.to) })} style={{ flex: 1, backgroundColor: p.tier === i ? '#233a34' : C.card2, borderRadius: 10, paddingVertical: 7, alignItems: 'center', borderWidth: 2, borderColor: p.tier === i ? C.ac : 'transparent' }}><Text style={{ fontSize: 16 }}>{tr.icon}</Text><Text style={{ color: p.tier === i ? C.tx : C.mut, fontSize: 10, fontWeight: '700' }} numberOfLines={1}>{tr.name}</Text></Pressable>)}
-        </View>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {Array.from({ length: 10 }, (_, i) => t.from + i).map(l => (
-            <Pressable key={l} onPress={() => setP({ ...p, level: l })} style={{ width: '48.5%', backgroundColor: p.level === l ? '#233a34' : C.card2, borderRadius: 13, padding: 10, flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderColor: p.level === l ? C.ac : 'transparent' }}>
-              <Text style={{ color: C.ac, fontSize: 22, fontWeight: '800', width: 36 }}>{l}</Text>
-              <View style={{ flex: 1 }}><Text style={{ color: C.tx, fontWeight: '700', fontSize: 13 }} numberOfLines={1}>{NAMES[l - 1]}{beaten.indexOf(l) >= 0 ? ' ✓' : ''}{l > FREE_LEVELS && !pro ? ' 👑' : ''}</Text><Text style={{ color: C.mut, fontSize: 11 }}>{l * 10} pts for a win</Text></View>
-            </Pressable>))}
-        </View>
-        <Text style={S.label}>PLAY AS</Text>
-        <View style={{ flexDirection: 'row', gap: 6 }}>{[['w', '♔ White'], ['r', '🎲 Random'], ['b', '♚ Black']].map(([k, l]) => <Pressable key={k} onPress={() => setP({ ...p, color: k })} style={[S.btn, { borderWidth: 2, borderColor: p.color === k ? C.ac : 'transparent', backgroundColor: p.color === k ? '#233a34' : C.card2 }]}><Text style={S.btnT}>{l}</Text></Pressable>)}</View>
-        <Text style={[S.mut, { marginTop: 12 }]}>⏱ Every game: 7 minutes each side</Text>
-        <Pressable disabled={go} style={[S.big, { marginTop: 18, opacity: go ? .6 : 1 }]} onPress={async () => { setGo(true); await onStart(p); setGo(false); }}><Text style={S.bigT}>{p.level > FREE_LEVELS && !pro ? '👑 Unlock to play ' : 'Play '}{NAMES[p.level - 1]} (Level {p.level})</Text></Pressable>
-        <Pressable style={S.ghost} onPress={onClose}><Text style={S.ghostT}>Cancel</Text></Pressable>
-      </ScrollView></SafeAreaView>
-    </Modal>);
 }
 
 function Rankings({ profile }) {
@@ -367,63 +341,5 @@ function Rankings({ profile }) {
         </View>))}
       {rows !== null && !rows.length && !note.startsWith('Add') && mode === 'online' && <Text style={[S.mut, { textAlign: 'center', marginTop: 10 }]}>No online games here yet. Play one to get on this board.</Text>}
       <Text style={[S.mut, { textAlign: 'center', marginTop: 10 }]}>{note}</Text>
-    </ScrollView>);
-}
-
-function Profile({ settings, applySettings, lastGame, openReview, profile, me, setProfile, saveDoc, openAuth, signOut, deleteAcct, pro, openPaywall, restore, openLicences }) {
-  const d = profile || { points: 0, w: 0, l: 0, d: 0, beaten: [] };
-  const [f, setF] = useState({ name: d.name || '', city: d.city || '', state: d.state || '', country: d.country || '' }), [msg, setMsg] = useState('');
-  useEffect(() => { setF({ name: d.name || '', city: d.city || '', state: d.state || '', country: d.country || '' }); }, [profile && profile.id]);
-  const saveP = async () => {
-    setMsg('Saving…');
-    try {
-      const j = await api('profile', { id: me.current && me.current.id, secret: me.current && me.current.secret, ...f });
-      const secret = j.secret || (me.current && me.current.secret); if (j.secret) await saveSecret(j.secret);
-      me.current = { id: j.id, secret, doc: j.doc }; await saveDoc(j.doc); setMsg('Saved ✓ – your games are now ranked.');
-    } catch (e) { setMsg(e.message); }
-  };
-  const inp = (k, l, ph) => <View><Text style={S.label}>{l}</Text><TextInput style={S.input} value={f[k]} onChangeText={v => setF({ ...f, [k]: v })} placeholder={ph} placeholderTextColor={C.mut} maxLength={k === 'name' ? 24 : 40} autoCorrect={false} /></View>;
-  return (
-    <ScrollView contentContainerStyle={{ padding: 12 }} keyboardShouldPersistTaps="handled">
-      <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16, marginBottom: 8 }}>Your player card</Text>
-        <View style={{ flexDirection: 'row', gap: 8 }}>{[['rating', 'Bot rating'], ['points', 'Points'], ['w', 'Wins'], ['d', 'Draws'], ['l', 'Losses']].map(([k, l]) => <View key={k} style={{ flex: 1, backgroundColor: C.card2, borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}><Text style={{ color: C.tx, fontSize: 20, fontWeight: '800' }}>{k === 'rating' ? ((d.rating | 0) || 800) : d[k] | 0}</Text><Text style={S.mut}>{l}</Text></View>)}</View></View>
-      <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16, marginBottom: 8 }}>Online games</Text>
-        <View style={{ flexDirection: 'row', gap: 8 }}>{[['orating', 'Rating'], ['opeak', 'Peak'], ['ow', 'Wins'], ['od', 'Draws'], ['ol', 'Losses']].map(([k, l]) => <View key={k} style={{ flex: 1, backgroundColor: C.card2, borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}><Text style={{ color: C.tx, fontSize: 20, fontWeight: '800' }}>{k === 'orating' || k === 'opeak' ? ((d[k] | 0) || 1000) : d[k] | 0}</Text><Text style={S.mut}>{l}</Text></View>)}</View></View>
-      <Pressable onPress={openPaywall} style={[S.card, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}><Text style={{ color: pro ? C.ac : C.gold, fontWeight: '800' }}>{pro ? '👑 Chezz Pro is active' : '👑 Get Chezz Pro – all 50 levels, unlimited online games'}</Text>{!pro && <Text style={{ color: C.mut }}>›</Text>}</Pressable>
-      <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16, marginBottom: 8 }}>Settings</Text>
-        {[['sound', 'Sound effects'], ['haptics', 'Haptic feedback']].map(([k, l]) => (
-          <Pressable key={k} onPress={() => applySettings({ ...settings, [k]: !settings[k] })} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 }}>
-            <Text style={{ color: C.tx }}>{l}</Text><Text style={{ color: settings[k] ? C.ac : C.mut, fontWeight: '800' }}>{settings[k] ? 'On' : 'Off'}</Text></Pressable>))}
-        <Pressable onPress={() => applySettings({ ...settings, scheme: settings.scheme === 'light' ? 'dark' : 'light' })} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 }}>
-          <Text style={{ color: C.tx }}>Appearance</Text><Text style={{ color: C.ac, fontWeight: '800' }}>{settings.scheme === 'light' ? 'Light' : 'Dark'}</Text></Pressable>
-        <Text style={S.label}>BOARD THEME</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {THEMES.map(t => (
-            <Pressable key={t.id} onPress={() => (t.pro && !pro ? openPaywall() : applySettings({ ...settings, theme: t.id }))} style={{ width: '31%', alignItems: 'center', padding: 6, borderRadius: 12, backgroundColor: C.card2, borderWidth: 2, borderColor: settings.theme === t.id ? C.ac : 'transparent' }}>
-              <View style={{ flexDirection: 'row', width: 64, height: 32, borderRadius: 6, overflow: 'hidden' }}>{[t.light, t.dark, t.light, t.dark].map((c, i) => <View key={i} style={{ flex: 1, backgroundColor: c }} />)}</View>
-              <Text style={{ color: C.tx, fontSize: 11, fontWeight: '700', marginTop: 4 }}>{t.name}{t.pro && !pro ? ' 👑' : ''}</Text></Pressable>))}
-        </View>
-        {!!lastGame && <Pressable style={[S.ghost, { marginTop: 12 }]} onPress={() => openReview(lastGame)}><Text style={S.ghostT}>🔍 Review my last game</Text></Pressable>}
-      </View>
-      <PerfCard d={profile} />
-      <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16 }}>{!profile ? 'Account' : profile.email ? 'Account' : 'Guest account'}</Text>
-        <Text style={[S.mut, { marginTop: 4 }]}>{!profile ? 'You are not signed in.' : profile.email ? 'Signed in as ' + profile.email : 'Your stats live on this device only. Add an email and password to keep them and sign in anywhere.'}</Text>
-        {profile && !profile.email && <Pressable style={[S.big, { marginTop: 10 }]} onPress={() => openAuth('up')}><Text style={S.bigT}>Create account</Text></Pressable>}
-        {(!profile || !profile.email) && <Pressable style={S.ghost} onPress={() => openAuth('in')}><Text style={S.ghostT}>{profile ? 'Sign in to an existing account' : 'Sign in or play as guest'}</Text></Pressable>}
-        {!!profile && <Pressable style={S.ghost} onPress={signOut}><Text style={S.ghostT}>Sign out</Text></Pressable>}
-        {!!profile && <Pressable style={S.ghost} onPress={deleteAcct}><Text style={[S.ghostT, { color: C.bad }]}>Delete my account</Text></Pressable>}</View>
-      <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16 }}>Who are you & where do you play from?</Text><Text style={S.mut}>Your name and place put you on the city, state, country and worldwide leaderboards.</Text>
-        {inp('name', 'Display name', 'e.g. Aarav')}{inp('city', 'City', 'e.g. Ghaziabad')}{inp('state', 'State / Region', 'e.g. Uttar Pradesh')}{inp('country', 'Country', 'e.g. India')}
-        <Pressable style={[S.big, { marginTop: 8 }]} onPress={saveP}><Text style={S.bigT}>Save profile</Text></Pressable><Text style={[S.mut, { textAlign: 'center', marginTop: 8 }]}>{msg}</Text></View>
-      <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16, marginBottom: 8 }}>Levels beaten</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>{Array.from({ length: 50 }, (_, i) => i + 1).map(l => { const b = (d.beaten || []).indexOf(l) >= 0; return <View key={l} style={{ width: '9.2%', paddingVertical: 5, borderRadius: 8, alignItems: 'center', backgroundColor: b ? '#233a34' : C.card2, opacity: b ? 1 : .55 }}><Text style={{ color: b ? C.ac : C.tx, fontWeight: '800', fontSize: 12 }}>{l}</Text></View>; })}</View></View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 14, marginTop: 6 }}>
-        <Pressable onPress={() => restore().then(r => alert(r.ok ? 'Restored' : 'Nothing to restore', r.ok ? 'Chezz Pro is active.' : r.error || 'No purchases were found for this account.'))}><Text style={{ color: C.ac, fontWeight: '700' }}>Restore Purchases</Text></Pressable>
-        <Pressable onPress={() => Linking.openURL(TERMS_URL)}><Text style={S.mut}>Terms of Use (EULA)</Text></Pressable>
-        <Pressable onPress={() => Linking.openURL(PRIVACY_URL)}><Text style={S.mut}>Privacy Policy</Text></Pressable>
-        <Pressable onPress={() => Linking.openURL(SUPPORT_URL)}><Text style={S.mut}>Support</Text></Pressable>
-        <Pressable onPress={openLicences}><Text style={{ color: C.ac, fontWeight: '700' }}>Licences & source code</Text></Pressable>
-        <Text style={[S.mut, { width: '100%', textAlign: 'center', fontSize: 11 }]}>Chezz is free software (GPLv3). Engine: Stockfish. Chess pieces: Chessnut by Alexis Luengas.</Text>
-      </View>
     </ScrollView>);
 }

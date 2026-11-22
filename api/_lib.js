@@ -98,5 +98,5 @@ function handler(method, fn) {
   };
 }
 // full document for the signed-in owner (adds guest flag, email and the performance stats)
-const myDoc = d => Object.assign(publicDoc(d), { guest: !d.email, email: d.email || '', stats: statsOf(d), orecent: d.orecent || [] });
+const myDoc = d => Object.assign(publicDoc(d), { guest: !d.email && !d.apple, apple: !!d.apple, email: d.email || '', stats: statsOf(d), orecent: d.orecent || [] });
 module.exports = { authOK, hashPw, emailKey, blankStats, statsOf, myDoc, E, store, sign, verify, sha, clean, badText, norm, validId, loadPlayer, savePlayer, publicDoc, verifyGame, handler };

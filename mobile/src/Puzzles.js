@@ -29,7 +29,7 @@ export default function Puzzles({ themeId, pro, openPaywall }) {
     const chess = new K.Chess(PUZZLES[i].f);
     g.current = { chess, p: PUZZLES[i], step: 0 }; lock.current = false;
     setIdx(i); setSel(null); setState('play'); setHint(null); setLast(null); setFails(0); setIsDaily(!!daily);
-    setMsg((chess.turn() === 'w' ? 'White' : 'Black') + ' to move – ' + (PUZZLES[i].n === 1 ? 'mate in 1' : 'mate in 2'));
+    setMsg((chess.turn() === 'w' ? 'White' : 'Black') + ' to move · ' + (PUZZLES[i].n === 1 ? 'Mate in 1' : 'Mate in 2'));
     rerender();
   }, []);
   const persist = async s => { setStats(s); await save('puzzles', s); };
@@ -40,7 +40,7 @@ export default function Puzzles({ themeId, pro, openPaywall }) {
     persist({ ...stats, today: { day, n: t.n + 1 } }); open(i, false);
   };
   const solved = async () => {
-    setState('solved'); setMsg('Solved! 🎉'); play('win'); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    setState('solved'); setMsg('Solved!'); play('win'); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     const first = !stats.done[idx], s = { ...stats, solved: stats.solved + (first ? 1 : 0), done: { ...stats.done, [idx]: 1 } };
     await persist(s); setStreak(await bumpStreak('puzzle'));
   };
@@ -78,38 +78,39 @@ export default function Puzzles({ themeId, pro, openPaywall }) {
   const targets = st && sel && state === 'play' ? st.chess.moves({ square: sel, verbose: true }).map(m => m.to) : [];
   const flip = !!st && st.p.f.split(' ')[1] === 'b';
 
+  const Chip = ({ t, gold }) => <Text style={{ color: gold ? C.gold : C.mut, backgroundColor: C.card2, fontWeight: '800', fontSize: 12, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, overflow: 'hidden', marginLeft: 6 }}>{t}</Text>;
+  const left = Math.max(0, FREE_PER_DAY - (stats.today.day === dayNum() ? stats.today.n : 0));
   if (!st) return (
-    <ScrollView contentContainerStyle={{ padding: 14 }}>
-      <Text style={S.h2}>Puzzles</Text>
-      <Text style={[S.mut, { marginVertical: 6 }]}>Find the forced checkmate. Every puzzle has a single winning first move.</Text>
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
-        <View style={[S.card, { flex: 1, alignItems: 'center', marginBottom: 0 }]}><Text style={{ color: C.gold, fontSize: 26, fontWeight: '800' }}>🔥 {streak.count}</Text><Text style={S.mut}>day streak</Text></View>
-        <View style={[S.card, { flex: 1, alignItems: 'center', marginBottom: 0 }]}><Text style={{ color: C.ac, fontSize: 26, fontWeight: '800' }}>{stats.solved}</Text><Text style={S.mut}>solved</Text></View>
-        <View style={[S.card, { flex: 1, alignItems: 'center', marginBottom: 0 }]}><Text style={{ color: C.tx, fontSize: 26, fontWeight: '800' }}>{streak.best}</Text><Text style={S.mut}>best streak</Text></View>
+    <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: 30 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 24 }}>Puzzles</Text><View style={{ flexDirection: 'row' }}><Chip t={'Streak ' + streak.count} gold={streak.count > 0} /><Chip t={stats.solved + ' / ' + PUZZLES.length} /></View></View>
+      <View style={[S.card, { flexDirection: 'row' }]}>
+        <View style={{ flex: 1, alignItems: 'center' }}><Text style={{ color: C.gold, fontSize: 24, fontWeight: '800' }}>{streak.count}</Text><Text style={[S.mut, { fontSize: 11 }]}>Day streak</Text></View>
+        <View style={{ flex: 1, alignItems: 'center' }}><Text style={{ color: C.ac, fontSize: 24, fontWeight: '800' }}>{stats.solved}</Text><Text style={[S.mut, { fontSize: 11 }]}>Solved</Text></View>
+        <View style={{ flex: 1, alignItems: 'center' }}><Text style={{ color: C.tx, fontSize: 24, fontWeight: '800' }}>{streak.best}</Text><Text style={[S.mut, { fontSize: 11 }]}>Best streak</Text></View>
       </View>
-      <Pressable style={S.big} onPress={() => open(dailyIdx(), true)}><Text style={S.bigT}>{stats.done[dailyIdx()] ? '✓ Daily puzzle (replay)' : '📅 Daily puzzle'}</Text></Pressable>
-      <Pressable style={S.ghost} onPress={next}><Text style={S.ghostT}>Next puzzle {pro ? '' : '(' + Math.max(0, FREE_PER_DAY - (stats.today.day === dayNum() ? stats.today.n : 0)) + ' free left today)'}</Text></Pressable>
-      <Text style={[S.mut, { textAlign: 'center', marginTop: 14 }]}>{PUZZLES.length} puzzles · mate in 1 and mate in 2 · solve one a day to keep your streak</Text>
+      <Pressable style={S.big} onPress={() => open(dailyIdx(), true)} accessibilityRole="button"><Text style={S.bigT}>{stats.done[dailyIdx()] ? 'Daily puzzle (solved, replay)' : 'Daily puzzle'}</Text></Pressable>
+      <Pressable style={S.ghost} onPress={next} accessibilityRole="button"><Text style={S.ghostT}>Next puzzle{pro ? '' : ' (' + left + ' free left today)'}</Text></Pressable>
+      <Text style={[S.mut, { textAlign: 'center', marginTop: 14 }]}>Find the forced checkmate. {PUZZLES.length} puzzles, mate in 1 and mate in 2. Solve one a day to keep your streak.</Text>
     </ScrollView>);
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12 }}>
-        <Pressable onPress={() => { g.current = null; rerender(); }}><Text style={{ color: C.mut, fontWeight: '700' }}>‹ Puzzles</Text></Pressable>
-        <Text style={{ color: C.tx, fontWeight: '800' }}>{isDaily ? '📅 Daily · ' : ''}Mate in {st.p.n}</Text>
-        <Text style={{ color: C.gold, fontWeight: '800' }}>🔥 {streak.count}</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10 }}>
+        <Pressable onPress={() => { g.current = null; rerender(); }} accessibilityRole="button"><Text style={{ color: C.ac, fontWeight: '800', fontSize: 16 }}>‹ Puzzles</Text></Pressable>
+        <View style={{ flexDirection: 'row' }}><Chip t={'Streak ' + streak.count} gold={streak.count > 0} /><Chip t={stats.solved + ' / ' + PUZZLES.length} /></View>
       </View>
+      <Text style={{ color: C.tx, fontWeight: '800', fontSize: 22, paddingHorizontal: 14, marginBottom: 10 }}>{isDaily ? 'Daily puzzle' : 'Puzzle ' + (idx + 1)}</Text>
       <Board fen={st.chess.fen()} flip={flip} sel={sel} targets={targets} last={last} hint={hint} onTap={onTap} themeId={themeId} animate />
-      <Text style={{ color: state === 'solved' ? C.ac : msg.startsWith('Not') ? C.bad : C.tx, fontWeight: '700', textAlign: 'center', marginVertical: 12, minHeight: 22 }}>{msg}</Text>
-      <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 12 }}>
+      <Text style={{ color: state === 'solved' ? C.ac : msg.startsWith('Not') ? C.bad : C.tx, fontWeight: '800', fontSize: 18, textAlign: 'center', marginTop: 12, minHeight: 24 }}>{msg}</Text>
+      <Text style={[S.mut, { textAlign: 'center', marginTop: 4, marginBottom: 12 }]}>{state === 'play' ? (fails >= 2 ? 'Stuck? Show hint marks the piece to move.' : 'Tap a piece, then its target square.') : ' '}</Text>
+      <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 14 }}>
         {state === 'play' ? <>
-          <Pressable style={S.btn} onPress={showHint}><Text style={S.btnT}>💡 Hint</Text></Pressable>
-          <Pressable style={S.btn} onPress={showSolution}><Text style={S.btnT}>Show solution</Text></Pressable>
+          <Pressable style={[S.ghost, { flex: 1, marginTop: 0 }]} onPress={showHint} accessibilityRole="button"><Text style={S.ghostT}>Show hint</Text></Pressable>
+          <Pressable style={[S.ghost, { flex: 1, marginTop: 0 }]} onPress={showSolution} accessibilityRole="button"><Text style={S.ghostT}>Show solution</Text></Pressable>
         </> : <>
-          <Pressable style={S.btn} onPress={() => open(idx, isDaily)}><Text style={S.btnT}>↺ Retry</Text></Pressable>
-          <Pressable style={[S.btn, { backgroundColor: C.ac }]} onPress={next}><Text style={[S.btnT, { color: '#06261c' }]}>Next puzzle ›</Text></Pressable>
+          <Pressable style={[S.ghost, { flex: 1, marginTop: 0 }]} onPress={() => open(idx, isDaily)} accessibilityRole="button"><Text style={S.ghostT}>Retry</Text></Pressable>
+          <Pressable style={[S.big, { flex: 1 }]} onPress={next} accessibilityRole="button"><Text style={S.bigT}>Next puzzle</Text></Pressable>
         </>}
       </View>
-      {fails >= 2 && state === 'play' && <Text style={[S.mut, { textAlign: 'center', marginTop: 10 }]}>Stuck? Tap Hint to see which piece to move.</Text>}
     </ScrollView>);
 }
