@@ -27,12 +27,12 @@ Play online pairs two players with close online ratings (the allowed gap widens 
 The web app is the Expo app's browser build. `npm run build:web` exports it into `web-dist/` together with the Stockfish worker files and the policy pages from `public/`; the Worker serves that folder. There are no purchases on the web.
 
 ## Layout
-`public/` (web app: `index.html`, `app.js`, `worker.js`, `engine.js`) · `api/*.js` (handlers) · `src/worker.mjs` + `wrangler.jsonc` (Cloudflare Worker: serves `public/` and `/api/*`, D1 storage) · `mobile/` (Expo iOS/Android app) · `test/`
+`core/` (shared rules, bot levels, Stockfish driver, live-game rules) · `mobile/` (Expo app for iOS, Android and the browser) · `api/*.js` (HTTP handlers) · `src/worker.mjs` + `src/live.mjs` + `wrangler.jsonc` (Cloudflare Worker: serves `web-dist/` and `/api/*`, D1 storage, Durable Objects for live games) · `public/` (policy pages and Stockfish worker files copied into `web-dist/`) · `scripts/` (build and deploy) · `test/`
 
 ## Run locally
 ```
-npm i && node localserver.js            # http://localhost:8099 (in-memory store)
-npx wrangler d1 execute chezz --local --file=schema.sql && npx wrangler dev --local   # full Worker + D1
+npm i && npm run build:web              # builds web-dist/
+npx wrangler d1 execute chezz --local --file=schema.sql && npx wrangler dev --local   # web app, API, live games and D1 on http://localhost:8787
 npm test                                # core, API, auth, puzzles/analysis
 node test/arena.js                      # bot strength ladder (slow)
 node test/worker-e2e.js                 # against a running `wrangler dev --local --port 8799`
