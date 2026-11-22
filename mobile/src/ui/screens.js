@@ -141,7 +141,6 @@ export const OnlineLobby = () => (
     <View style={[S.card, { alignItems: 'center', paddingVertical: 20 }]}><Text style={S.mut}>YOUR ONLINE RATING</Text><Text style={{ color: C.tx, fontWeight: '800', fontSize: 44 }}>1085</Text>
       <Row style={{ marginTop: 6, alignSelf: 'stretch' }}><Stat v="23" l="Wins" col={C.ac} /><Stat v="4" l="Draws" /><Stat v="19" l="Losses" col={C.bad} /></Row></View>
     <Big t="Find a match" /><Text style={[S.mut, { textAlign: 'center', marginVertical: 10 }]}>7 minutes each · matched within 150 rating points</Text>
-    <Row style={{ gap: 8 }}><Big ghost t="Invite a friend" style={{ flex: 1, marginTop: 0 }} /><Big ghost t="Join with code" style={{ flex: 1, marginTop: 0 }} /></Row>
     <Text style={[S.label, { marginTop: 16 }]}>RECENT ONLINE GAMES</Text>
     {[['Rohan_27', 1102, 'Won', '+14', C.ac], ['kasparov_jr', 1140, 'Lost', '-9', C.bad], ['Ishita', 1051, 'Draw', '-1', C.mut]].map(([n, r, res, d, col]) => (
       <Row key={n} style={[S.card, { justifyContent: 'space-between', paddingVertical: 11 }]}><Row><Face name={n} /><View style={{ marginLeft: 10 }}><Text style={{ color: C.tx, fontWeight: '700' }}>{n}</Text><Text style={[S.mut, { fontSize: 12 }]}>{r}</Text></View></Row>
