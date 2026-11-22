@@ -1,7 +1,7 @@
 // Public configuration. Set these as EAS environment variables (EXPO_PUBLIC_*) in expo.dev.
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/$/, '');
 export const RC_IOS_KEY = process.env.EXPO_PUBLIC_RC_IOS_KEY || '';
-export const RC_ANDROID_KEY = process.env.EXPO_PUBLIC_RC_ANDROID_KEY || '';
+export const RC_ANDROID_KEY = process.env.EXPO_PUBLIC_RC_ANDROID_KEY || 'goog_daaJqyrslPCjUMeivHKEaJBYyyS';
 export const ENTITLEMENT = 'pro';
 // Create these auto-renewable subscription product IDs in App Store Connect and
 // Play Console, then attach both to the RevenueCat entitlement above and to the
