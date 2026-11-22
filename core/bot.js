@@ -3,8 +3,8 @@
 // (game id, ply, level, engine output) always gives the same move on the phone, in the browser and on the server.
 const LEVELS = 50;
 const TIERS = [
-  { name: 'Beginner', from: 1, to: 10 }, { name: 'Casual', from: 11, to: 20 }, { name: 'Club', from: 21, to: 30 },
-  { name: 'Advanced', from: 31, to: 40 }, { name: 'Master', from: 41, to: 50 }];
+  { name: 'Beginner', from: 1, to: 10, icon: '🐣' }, { name: 'Casual', from: 11, to: 20, icon: '🙂' }, { name: 'Club', from: 21, to: 30, icon: '♟️' },
+  { name: 'Advanced', from: 31, to: 40, icon: '🎯' }, { name: 'Master', from: 41, to: 50, icon: '👑' }];
 const tierOf = l => TIERS.find(t => l <= t.to) || TIERS[TIERS.length - 1];
 
 // nodes : Stockfish node budget per move (its "thinking time", machine-independent)

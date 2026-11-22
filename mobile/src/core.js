@@ -3636,11 +3636,11 @@ var require_bot = __commonJS({
   "core/bot.js"(exports2, module2) {
     var LEVELS = 50;
     var TIERS = [
-      { name: "Beginner", from: 1, to: 10 },
-      { name: "Casual", from: 11, to: 20 },
-      { name: "Club", from: 21, to: 30 },
-      { name: "Advanced", from: 31, to: 40 },
-      { name: "Master", from: 41, to: 50 }
+      { name: "Beginner", from: 1, to: 10, icon: "\u{1F423}" },
+      { name: "Casual", from: 11, to: 20, icon: "\u{1F642}" },
+      { name: "Club", from: 21, to: 30, icon: "\u265F\uFE0F" },
+      { name: "Advanced", from: 31, to: 40, icon: "\u{1F3AF}" },
+      { name: "Master", from: 41, to: 50, icon: "\u{1F451}" }
     ];
     var tierOf = (l) => TIERS.find((t) => l <= t.to) || TIERS[TIERS.length - 1];
     var LV = [null];

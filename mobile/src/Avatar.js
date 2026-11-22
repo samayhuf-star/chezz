@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { SvgXml } from 'react-native-svg';
-import * as E from './engine';
+import { TIERS } from './core';
 
 // Every bot gets its own face: colour from its level, eyes/mouth/brows from the level number, and an accessory that marks its tier.
 function hsl(h, s, l) {
@@ -8,7 +8,7 @@ function hsl(h, s, l) {
   return '#' + [f(0), f(8), f(4)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
 }
 export function botFace(level) {
-  const tier = E.TIERS.findIndex(t => level <= t.to), hue = (level * 47) % 360;
+  const tier = TIERS.findIndex(t => level <= t.to), hue = (level * 47) % 360;
   const bg = hsl(hue, 55, 42), skin = hsl(hue, 70, 82), ink = '#1b1f27', angry = Math.min(1, level / 50);
   const eyes = [
     `<circle cx="38" cy="46" r="5" fill="${ink}"/><circle cx="62" cy="46" r="5" fill="${ink}"/>`,

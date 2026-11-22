@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import * as E from './engine';
+import * as K from './core';
 import Board from './Board';
 import { C, S } from './theme';
 import { load, save } from './storage';
@@ -10,13 +10,13 @@ import { play, moveSound } from './sound';
 import PUZZLES from './puzzles.json';
 
 const FREE_PER_DAY = 5;
-const findMove = (G, name) => E.legalMoves(G, false).find(m => E.moveName(m) === name);
-const isMate = G => E.inCheck(G) && E.legalMoves(G, false).length === 0;
+// Would this move (UCI) give checkmate? The position is left unchanged.
+const matesAfter = (chess, u) => { if (!K.play(chess, u)) return false; const k = chess.isCheckmate(); chess.undo(); return k; };
 const dailyIdx = () => { const pool = PUZZLES.map((p, i) => (p.n === 2 ? i : -1)).filter(i => i >= 0); return pool[dayNum() % pool.length]; };
 
 export default function Puzzles({ themeId, pro, openPaywall }) {
   const g = useRef(null), [, force] = useState(0), rerender = useCallback(() => force(x => x + 1), []);
-  const [idx, setIdx] = useState(null), [sel, setSel] = useState(-1), [state, setState] = useState('play'), [msg, setMsg] = useState(''), [hint, setHint] = useState(null), [last, setLast] = useState(null);
+  const [idx, setIdx] = useState(null), [sel, setSel] = useState(null), [state, setState] = useState('play'), [msg, setMsg] = useState(''), [hint, setHint] = useState(null), [last, setLast] = useState(null);
   const [stats, setStats] = useState({ solved: 0, done: {}, today: { day: -1, n: 0 } }), [streak, setStreak] = useState({ count: 0, best: 0 }), [fails, setFails] = useState(0), [isDaily, setIsDaily] = useState(false);
   const lock = useRef(false);
 
@@ -26,10 +26,10 @@ export default function Puzzles({ themeId, pro, openPaywall }) {
   })(); }, []);
 
   const open = useCallback((i, daily) => {
-    const G = E.newGame(); E.setupFEN(G, PUZZLES[i].f);
-    g.current = { G, p: PUZZLES[i], step: 0 }; lock.current = false;
-    setIdx(i); setSel(-1); setState('play'); setHint(null); setLast(null); setFails(0); setIsDaily(!!daily);
-    setMsg((G.t === 1 ? 'White' : 'Black') + ' to move – ' + (PUZZLES[i].n === 1 ? 'mate in 1' : 'mate in 2'));
+    const chess = new K.Chess(PUZZLES[i].f);
+    g.current = { chess, p: PUZZLES[i], step: 0 }; lock.current = false;
+    setIdx(i); setSel(null); setState('play'); setHint(null); setLast(null); setFails(0); setIsDaily(!!daily);
+    setMsg((chess.turn() === 'w' ? 'White' : 'Black') + ' to move – ' + (PUZZLES[i].n === 1 ? 'mate in 1' : 'mate in 2'));
     rerender();
   }, []);
   const persist = async s => { setStats(s); await save('puzzles', s); };
@@ -44,38 +44,38 @@ export default function Puzzles({ themeId, pro, openPaywall }) {
     const first = !stats.done[idx], s = { ...stats, solved: stats.solved + (first ? 1 : 0), done: { ...stats.done, [idx]: 1 } };
     await persist(s); setStreak(await bumpStreak('puzzle'));
   };
-  const apply = (G, m) => { const cap = G.b[(m >> 7) & 127] !== 0 || ((m >> 17) & 2); E.make(G, m); moveSound({ capture: cap, check: E.inCheck(G), promo: (m >> 14) & 7 }); setLast([m & 127, (m >> 7) & 127]); };
-  const tryMove = m => {
+  const apply = (chess, u) => { const mv = K.play(chess, u); if (!mv) return; moveSound({ capture: !!mv.captured, check: chess.isCheck(), promo: mv.promotion ? 1 : 0 }); setLast([mv.from, mv.to]); };
+  const tryMove = u => {
     const st = g.current; if (!st || lock.current || state !== 'play') return;
-    const { G, p } = st, name = E.moveName(m), before = E.fen(G);
-    const ok = p.n === 1 ? (E.make(G, m), (isMate(G) ? (E.unmake(G), true) : (E.unmake(G), false))) : st.step === 0 ? name === p.s : (E.make(G, m), (isMate(G) ? (E.unmake(G), true) : (E.unmake(G), false)));
+    const { chess, p } = st;
+    const ok = p.n === 1 || st.step === 1 ? matesAfter(chess, u) : u === p.s;
     if (!ok) { // wrong: show it, then put the position back
-      lock.current = true; apply(G, m); rerender(); setMsg('Not the move – try again'); setFails(f => f + 1); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-      setTimeout(() => { E.unmake(G); setLast(null); lock.current = false; setSel(-1); rerender(); }, 700); return;
+      lock.current = true; apply(chess, u); rerender(); setMsg('Not the move – try again'); setFails(f => f + 1); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      setTimeout(() => { chess.undo(); setLast(null); lock.current = false; setSel(null); rerender(); }, 700); return;
     }
-    apply(G, m); setSel(-1); setHint(null);
-    if (isMate(G)) { rerender(); return solved(); }
+    apply(chess, u); setSel(null); setHint(null);
+    if (chess.isCheckmate()) { rerender(); return solved(); }
     st.step = 1; lock.current = true; setMsg('Good! Now finish it…'); rerender();
-    setTimeout(() => { const r = findMove(G, p.r); if (r) apply(G, r); lock.current = false; rerender(); }, 600);
+    setTimeout(() => { if (p.r) apply(chess, p.r); lock.current = false; rerender(); }, 600);
   };
   const onTap = s => {
     const st = g.current; if (!st || lock.current || state !== 'play') return;
-    const { G } = st, ms = E.legalMoves(G, false), pc = G.b[s];
-    if (sel >= 0) {
-      const cand = ms.filter(m => (m & 127) === sel && ((m >> 7) & 127) === s);
-      if (cand.length) return tryMove(cand.find(m => ((m >> 14) & 7) === 5) || cand[0]); // promotions: queen
+    const { chess } = st, pc = chess.get(s);
+    if (sel) {
+      const cand = chess.moves({ square: sel, verbose: true }).filter(m => m.to === s).map(K.toUci);
+      if (cand.length) return tryMove(cand.find(u => u[4] === 'q') || cand[0]); // promotions: queen
     }
-    if (pc && (pc > 0) === (G.t === 1)) { setSel(s); setHint(null); } else setSel(-1);
+    if (pc && pc.color === chess.turn()) { setSel(s); setHint(null); } else setSel(null);
   };
-  const showHint = () => { const st = g.current; if (!st) return; const m = st.step === 0 ? findMove(st.G, st.p.s) : E.legalMoves(st.G, false).find(x => { E.make(st.G, x); const k = isMate(st.G); E.unmake(st.G); return k; }); if (m) setHint([m & 127, m & 127]); };
+  const showHint = () => { const st = g.current; if (!st) return; const m = st.step === 0 ? st.p.s : K.legalUci(st.chess).find(x => matesAfter(st.chess, x)); if (m) setHint([m.slice(0, 2), m.slice(0, 2)]); };
   const showSolution = () => {
     const st = g.current; if (!st || lock.current) return;
-    const m = st.step === 0 ? findMove(st.G, st.p.s) : E.legalMoves(st.G, false).find(x => { E.make(st.G, x); const k = isMate(st.G); E.unmake(st.G); return k; });
-    if (m) { apply(st.G, m); setState('shown'); setMsg('Solution: ' + E.moveName(m).replace(/(..)(..)/, '$1 → $2') + (st.p.n === 2 && st.step === 0 ? ' – then mate next move' : '')); rerender(); }
+    const m = st.step === 0 ? st.p.s : K.legalUci(st.chess).find(x => matesAfter(st.chess, x));
+    if (m) { apply(st.chess, m); setState('shown'); setMsg('Solution: ' + m.replace(/(..)(..)/, '$1 → $2') + (st.p.n === 2 && st.step === 0 ? ' – then mate next move' : '')); rerender(); }
   };
 
-  const st = g.current, targets = {};
-  if (st && sel >= 0 && state === 'play') E.legalMoves(st.G, false).forEach(m => { if ((m & 127) === sel) targets[(m >> 7) & 127] = true; });
+  const st = g.current;
+  const targets = st && sel && state === 'play' ? st.chess.moves({ square: sel, verbose: true }).map(m => m.to) : [];
   const flip = !!st && st.p.f.split(' ')[1] === 'b';
 
   if (!st) return (
@@ -99,7 +99,7 @@ export default function Puzzles({ themeId, pro, openPaywall }) {
         <Text style={{ color: C.tx, fontWeight: '800' }}>{isDaily ? '📅 Daily · ' : ''}Mate in {st.p.n}</Text>
         <Text style={{ color: C.gold, fontWeight: '800' }}>🔥 {streak.count}</Text>
       </View>
-      <Board G={st.G} flip={flip} sel={sel} targets={targets} last={last} hint={hint} onTap={onTap} themeId={themeId} animate />
+      <Board fen={st.chess.fen()} flip={flip} sel={sel} targets={targets} last={last} hint={hint} onTap={onTap} themeId={themeId} animate />
       <Text style={{ color: state === 'solved' ? C.ac : msg.startsWith('Not') ? C.bad : C.tx, fontWeight: '700', textAlign: 'center', marginVertical: 12, minHeight: 22 }}>{msg}</Text>
       <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 12 }}>
         {state === 'play' ? <>

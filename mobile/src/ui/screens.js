@@ -2,7 +2,7 @@
 // No engine, network or purchases here; later checkpoints wire these to chess.js, Stockfish and the live-game server.
 import React from 'react';
 import { View, Text, Image, ScrollView } from 'react-native';
-import FenBoard from './FenBoard';
+import FenBoard from '../Board';
 import Avatar from '../Avatar';
 import { Piece } from '../Board';
 import { C, S } from '../theme';

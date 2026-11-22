@@ -30,7 +30,6 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "embed-engine": "node scripts/embed-engine.js",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint"
   },

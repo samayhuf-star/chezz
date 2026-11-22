@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "deploy": "bash scripts/deploy-cloudflare.sh",
-    "deploy:local": "bash scripts/deploy-cloudflare.sh --local"
+    "deploy:local": "bash scripts/deploy-cloudflare.sh --local",
+    "build:core": "node scripts/build-core.js",
+    "test": "node test/core.js && node test/api.js && node test/auth.js && node test/features.js"
   },
   "dependencies": {
     "@vercel/blob": "^1.0.0",
@@ -14,5 +16,6 @@
   "devDependencies": {
     "esbuild": "^0.28.2",
     "wrangler": "^4.160.0"
-  }
+  },
+  "license": "GPL-3.0-or-later"
 }
