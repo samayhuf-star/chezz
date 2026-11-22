@@ -1,5 +1,5 @@
 // Shared Chezz core: rules (chess.js), bot levels and the Stockfish driver.
-const rules = require('./rules'), bot = require('./bot'), sf = require('./sfdriver');
+const rules = require('./rules'), bot = require('./bot'), sf = require('./sfdriver'), live = require('./live');
 
 // The move a level plays in the position after `moves`. `driver` comes from sf.createDriver.
 async function botMove(driver, moves, level, gameId) {
@@ -14,4 +14,4 @@ async function botAcceptsDraw(driver, moves, level) {
   const { lines } = await driver.search({ moves, nodes: bot.DRAW_NODES, mpv: 1 });
   return lines.length ? bot.acceptsDraw(-lines[0].cp, level, moves.length) : false;
 }
-module.exports = Object.assign({ botMove, botAcceptsDraw }, rules, bot, sf);
+module.exports = Object.assign({ botMove, botAcceptsDraw, live }, rules, bot, sf);

@@ -16,7 +16,9 @@ module.exports = L.handler('GET', async (req, res) => {
     if (scope === 'state') return true;
     return L.norm(r.city) === city;
   });
-  rows.sort((a, b) => b.points - a.points || b.w - a.w || a.name.localeCompare(b.name));
+  // sort=online ranks by live-game rating (players with at least one online game); default ranks by bot points
+  if (q.sort === 'online') { rows = rows.filter(r => r.ogames > 0); rows.sort((a, b) => b.orating - a.orating || b.ow - a.ow || a.name.localeCompare(b.name)); }
+  else rows.sort((a, b) => b.points - a.points || b.w - a.w || a.name.localeCompare(b.name));
   const idx = q.id ? rows.findIndex(r => r.id === q.id) : -1;
   res.setHeader('Cache-Control', 's-maxage=15, stale-while-revalidate=60');
   res.status(200).json({ total: rows.length, rank: idx >= 0 ? idx + 1 : null, rows: rows.slice(0, 50) });

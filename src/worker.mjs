@@ -7,6 +7,7 @@ import auth from '../api/auth.js';
 import sfFactory from './sf-factory.mjs';
 import sfWasm from './sf.wasm';
 import core from '../core/index.js';
+export { Lobby, GameRoom } from './live.mjs';
 // A fresh Stockfish per claim: the wasm module is compiled once by the runtime, instantiating it is cheap.
 globalThis.__SF_MAKE = () => core.createDriver(core.moduleLink(sfFactory, {
   instantiateWasm(imports, done) { const inst = new WebAssembly.Instance(sfWasm, imports); done(inst, sfWasm); return inst.exports; },
@@ -16,6 +17,10 @@ const routes = { '/api/profile': profile, '/api/new': newGame, '/api/claim': cla
 export default {
   async fetch(request, env) {
     const url = new URL(request.url), fn = routes[url.pathname];
+    // live games: WebSockets handled by Durable Objects (one lobby, one room per game)
+    if (url.pathname === '/api/live/queue') return env.LOBBY.get(env.LOBBY.idFromName('main')).fetch(request);
+    const room = /^\/api\/live\/game\/([a-f0-9]{16})$/.exec(url.pathname);
+    if (room) return env.ROOM.get(env.ROOM.idFromName(room[1])).fetch(request);
     if (!fn) return env.ASSETS ? env.ASSETS.fetch(request) : new Response('Not found', { status: 404 });
     globalThis.__DB = env.DB;
     if (env.CHESS_SECRET) process.env.CHESS_SECRET = env.CHESS_SECRET;

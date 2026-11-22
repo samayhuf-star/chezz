@@ -45,7 +45,9 @@ const emailKey = e => 'emails/' + sha(String(e).trim().toLowerCase()) + '.json';
 const blankStats = () => ({ lv: {}, white: { w: 0, l: 0, d: 0 }, black: { w: 0, l: 0, d: 0 }, streak: 0, bestStreak: 0, plies: 0, secs: 0, timeouts: 0, resigns: 0, recent: [] });
 const statsOf = d => Object.assign(blankStats(), d.stats || {});
 const publicDoc = d => ({ id: d.id, name: d.name, city: d.city, state: d.state, country: d.country,
-  points: d.points | 0, w: d.w | 0, l: d.l | 0, d: d.d | 0, best: d.best | 0, games: d.games | 0, beaten: d.beaten || [], rating: (d.rating | 0) || 800 });
+  points: d.points | 0, w: d.w | 0, l: d.l | 0, d: d.d | 0, best: d.best | 0, games: d.games | 0, beaten: d.beaten || [], rating: (d.rating | 0) || 800,
+  // live player-vs-player record
+  orating: (d.orating | 0) || E.live.START_RATING, ogames: d.ogames | 0, ow: d.ow | 0, ol: d.ol | 0, od: d.od | 0, opeak: (d.opeak | 0) || (d.orating | 0) || E.live.START_RATING });
 
 /* Re-check a finished game. Returns {ok, error, result:'w'|'l'|'d', reason, plies}. Moves are UCI strings. */
 async function verifyGame(st, c) {
@@ -96,5 +98,5 @@ function handler(method, fn) {
   };
 }
 // full document for the signed-in owner (adds guest flag, email and the performance stats)
-const myDoc = d => Object.assign(publicDoc(d), { guest: !d.email, email: d.email || '', stats: statsOf(d) });
+const myDoc = d => Object.assign(publicDoc(d), { guest: !d.email, email: d.email || '', stats: statsOf(d), orecent: d.orecent || [] });
 module.exports = { authOK, hashPw, emailKey, blankStats, statsOf, myDoc, E, store, sign, verify, sha, clean, badText, norm, validId, loadPlayer, savePlayer, publicDoc, verifyGame, handler };

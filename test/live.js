@@ -1,0 +1,30 @@
+// Live-game room logic (core/live.js) with a fake clock. Run: node test/live.js
+const { live: L } = require('../core');
+let bad = 0; const ok = (n, c) => { console.log(c ? 'ok  ' : 'FAIL', n); if (!c) bad++; };
+const P = () => ({ w: { id: 'a', name: 'A', rating: 1000 }, b: { id: 'b', name: 'B', rating: 1100 } });
+let g = L.newRoom(P(), 0);
+ok('wrong turn rejected', L.move(g, 'b', 'e7e5', 10).error === 'Not your turn');
+ok('illegal move rejected', L.move(g, 'w', 'e2e5', 10).error === 'Illegal move');
+L.move(g, 'w', 'f2f3', 1000); ok('clock does not run before both first moves', !g.running && L.clocks(g, 30000)[1] === L.BASE_MS);
+L.move(g, 'b', 'e7e5', 2000); ok('clock runs after both first moves', g.running);
+L.move(g, 'w', 'g2g4', 12000); ok('white spent 10 s', g.clk[0] === L.BASE_MS - 10000);
+L.move(g, 'b', 'd8h4', 15000); ok('checkmate ends the game for black', g.over && g.over.r === 'b' && g.over.why === 'Checkmate');
+let s = L.settle(g, { w: 0, b: 0 }); ok('ratings: winner up, loser down (' + s.dw + ', ' + s.db + ')', s.db > 0 && s.dw < 0 && s.db < 16);
+ok('no moves after the end', L.move(g, 'w', 'a2a3', 16000).error === 'Game is over');
+L.rematch(g, 'w', 20000); ok('one rematch request waits', g.over && g.rematch.w);
+ok('both rematch: new game, colours swapped', L.rematch(g, 'b', 21000).restarted && !g.over && g.players.w.id === 'b' && g.n === 2 && g.moves.length === 0);
+
+g = L.newRoom(P(), 0); L.move(g, 'w', 'e2e4', 100); L.move(g, 'b', 'e7e5', 200);
+ok('no flag yet', !L.tick(g, 200 + L.BASE_MS - 1)); ok('wake time is the flag time', L.nextWake(g) === 200 + L.BASE_MS);
+ok('flag: white loses on time', L.tick(g, 200 + L.BASE_MS) && g.over.r === 'b' && g.over.why === 'Won on time');
+g = L.newRoom(P(), 0); ok('abort if the game never starts', L.tick(g, L.START_GRACE_MS) && g.aborted && L.settle(g, { w: 0, b: 0 }).dw === 0);
+g = L.newRoom(P(), 0); L.move(g, 'w', 'e2e4', 1); L.move(g, 'b', 'e7e5', 2); L.draw(g, 'w', 3);
+ok('draw offer pending', g.drawOffer === 'w' && !g.over); L.decline(g, 'b'); ok('declined', g.drawOffer === null);
+L.draw(g, 'b', 4); L.draw(g, 'w', 5); ok('draw agreed', g.over && g.over.r === 'd'); s = L.settle(g, { w: 30, b: 30 }); ok('draw moves the lower-rated player up', s.dw > 0 && s.db < 0);
+g = L.newRoom(P(), 0); L.move(g, 'w', 'e2e4', 1); L.move(g, 'b', 'e7e5', 2); L.resign(g, 'w', 3); ok('resignation', g.over.r === 'b');
+ok('view hides ids', !JSON.stringify(L.view(g, 'w', 3)).includes('"id"'));
+const q = [{ id: '1', rating: 1000, since: 0 }, { id: '2', rating: 1400, since: 0 }, { id: '3', rating: 1090, since: 1000 }];
+let pr = L.pairUp(q, 2000); ok('pairs the two close ratings, leaves the far one', pr.length === 1 && pr[0].map(x => x.id).sort().join() === '1,3');
+pr = L.pairUp([q[0], q[1]], 2000); ok('400 apart does not match at once', pr.length === 0);
+pr = L.pairUp([q[0], q[1]], 15000); ok('but matches after waiting', pr.length === 1);
+process.exit(bad ? 1 : 0);
