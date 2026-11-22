@@ -22,6 +22,9 @@ if [[ ! -d node_modules/wrangler ]]; then
   npm ci
 fi
 
+echo "Building the web app (web-dist/)..."
+bash scripts/build-web.sh
+
 if [[ "$LOCAL" == 1 ]]; then
   if [[ ! -f .dev.vars ]]; then
     echo "Create a gitignored .dev.vars file with CHESS_SECRET before running locally." >&2

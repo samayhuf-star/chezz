@@ -6,7 +6,8 @@
     "deploy": "bash scripts/deploy-cloudflare.sh",
     "deploy:local": "bash scripts/deploy-cloudflare.sh --local",
     "build:core": "node scripts/build-core.js",
-    "test": "node test/core.js && node test/api.js && node test/auth.js && node test/features.js"
+    "test": "node test/core.js && node test/live.js && node test/api.js && node test/auth.js && node test/features.js",
+    "build:web": "bash scripts/build-web.sh"
   },
   "dependencies": {
     "@vercel/blob": "^1.0.0",

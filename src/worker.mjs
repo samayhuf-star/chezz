@@ -1,4 +1,4 @@
-// One Cloudflare Worker: static site (public/, served by the assets binding) + the /api/* handlers.
+// One Cloudflare Worker: the web app (web-dist/, served by the assets binding), the /api/* handlers and live games.
 import profile from '../api/profile.js';
 import newGame from '../api/new.js';
 import claim from '../api/claim.js';
@@ -21,7 +21,11 @@ export default {
     if (url.pathname === '/api/live/queue') return env.LOBBY.get(env.LOBBY.idFromName('main')).fetch(request);
     const room = /^\/api\/live\/game\/([a-f0-9]{16})$/.exec(url.pathname);
     if (room) return env.ROOM.get(env.ROOM.idFromName(room[1])).fetch(request);
-    if (!fn) return env.ASSETS ? env.ASSETS.fetch(request) : new Response('Not found', { status: 404 });
+    if (!fn) { // static files: the browser build of the app (web-dist/) plus the policy pages
+      if (!env.ASSETS) return new Response('Not found', { status: 404 });
+      if (url.pathname === '/') { url.pathname = '/index.html'; return env.ASSETS.fetch(new Request(url, request)); }
+      return env.ASSETS.fetch(request);
+    }
     globalThis.__DB = env.DB;
     if (env.CHESS_SECRET) process.env.CHESS_SECRET = env.CHESS_SECRET;
     let body = {};

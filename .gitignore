@@ -7,3 +7,4 @@ node_modules
 # local wrangler state
 .wrangler/
 .dev.vars
+web-dist/

@@ -16,7 +16,8 @@ const fmtEval = s => (Math.abs(s) > E.MATE - 1000 ? (s > 0 ? '+M' : '-M') + Math
 
 // Post-game review: Stockfish scores every position; a move's grade is how much it gave up against the best move.
 const REVIEW_NODES = 12000;
-export default function Review({ visible, moves, human, level, themeId, engine, onClose }) {
+export default function Review({ visible, moves, human, level, oppName, themeId, engine, onClose }) {
+  const opp = oppName || NAMES[level - 1]; // a bot (level) or a live opponent (oppName)
   const [res, setRes] = useState(null), [prog, setProg] = useState(0), [ply, setPly] = useState(0);
   const sans = useMemo(() => { const r = moves && E.replay(moves); return r ? r.sans : []; }, [moves]);
   useEffect(() => {
@@ -68,7 +69,7 @@ export default function Review({ visible, moves, human, level, themeId, engine, 
             <Pressable onPress={onClose}><Text style={{ color: C.ac, fontWeight: '800', fontSize: 16 }}>Done</Text></Pressable>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, marginBottom: 6 }}>
-            <Avatar level={level} size={26} /><Text style={{ color: C.mut, marginLeft: 8 }}>{NAMES[level - 1]} (Lv {level})</Text>
+            {!oppName && <Avatar level={level} size={26} />}<Text style={{ color: C.mut, marginLeft: oppName ? 0 : 8 }}>{oppName ? 'vs ' + oppName : opp + ' (Lv ' + level + ')'}</Text>
           </View>
           <Board fen={view} flip={human === -1} last={lastSq} arrow={bestAlt ? [bestAlt.slice(0, 2), bestAlt.slice(2, 4)] : null} themeId={themeId} animate />
           {!res ? <Text style={[S.mut, { textAlign: 'center', marginTop: 14 }]}>Analysing… {prog}/{moves.length}</Text> : (
@@ -90,7 +91,7 @@ export default function Review({ visible, moves, human, level, themeId, engine, 
                 <Pressable style={S.btn} onPress={() => nextBad(1)}><Text style={S.btnT}>Next mistake ›</Text></Pressable>
               </View>
               <Text style={[S.label, { marginTop: 14 }]}>ACCURACY</Text>
-              <View style={{ flexDirection: 'row', gap: 8 }}><Row who="You" m={me} /><Row who={NAMES[level - 1]} m={-me} /></View>
+              <View style={{ flexDirection: 'row', gap: 8 }}><Row who="You" m={me} /><Row who={opp} m={-me} /></View>
               <Text style={[S.label, { marginTop: 14 }]}>EVALUATION</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', height: 64, backgroundColor: C.card, borderRadius: 12, overflow: 'hidden' }}>
                 {res.map((x, i) => { const v = Math.max(-1, Math.min(1, x.white / 600)); return (

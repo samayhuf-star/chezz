@@ -20,6 +20,12 @@ The bot is deterministic: for a given game id, ply and level, a node-limited Sto
 ## Licence
 Chezz is free software under the GNU General Public License v3 (see `LICENSE`), because it includes Stockfish. Third-party components are listed in `docs/THIRD_PARTY.md`.
 
+## Live games
+Play online pairs two players with close online ratings (the allowed gap widens while they wait) and runs the game on the server: one Durable Object is the lobby, one per game holds the moves and both 7-minute clocks, checks every move with chess.js and ends the game on mate, draw, resignation or time. Clients talk to it over WebSockets (`/api/live/queue`, `/api/live/game/<id>`); the first message signs the player in. Online ratings (Elo, start 1000) are separate from the bot rating and have their own leaderboard (`/api/leaderboard?sort=online`). Room rules live in `core/live.js`, sockets and storage in `src/live.mjs`.
+
+## Web app
+The web app is the Expo app's browser build. `npm run build:web` exports it into `web-dist/` together with the Stockfish worker files and the policy pages from `public/`; the Worker serves that folder. There are no purchases on the web.
+
 ## Layout
 `public/` (web app: `index.html`, `app.js`, `worker.js`, `engine.js`) · `api/*.js` (handlers) · `src/worker.mjs` + `wrangler.jsonc` (Cloudflare Worker: serves `public/` and `/api/*`, D1 storage) · `mobile/` (Expo iOS/Android app) · `test/`
 

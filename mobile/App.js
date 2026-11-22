@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, View, Text, Pressable, ScrollView, Modal, TextInput, Alert, AppState, SafeAreaView, Share, StatusBar, ActivityIndicator, Platform, Linking } from 'react-native';
+import { Image, View, Text, Pressable, ScrollView, Modal, TextInput, AppState, SafeAreaView, Share, StatusBar, ActivityIndicator, Platform, Linking } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import * as K from './src/core';
 import Board from './src/Board';
@@ -18,6 +18,12 @@ import Avatar from './src/Avatar';
 import { initSound, play, moveSound, setSoundEnabled } from './src/sound';
 import { THEMES, themeById } from './src/themes';
 import { bumpStreak, readStreak } from './src/streak';
+import { alert } from './src/alert';
+import Home from './src/Home';
+import Online from './src/Online';
+import Onboarding from './src/Onboarding';
+import Licences from './src/Licences';
+import { Piece } from './src/Board';
 
 const hap = { on: true }; // haptics switch (Profile > Settings)
 
@@ -30,7 +36,7 @@ const kingSq = chess => { if (!chess.isCheck()) return null; const t = chess.tur
 export default function App() {
   const bot = useRef(null), game = useRef(null), me = useRef(null), meCache = useRef(null);
   const [, force] = useState(0), rerender = useCallback(() => force(x => x + 1), []);
-  const [tab, setTab] = useState('play');
+  const [tab, setTab] = useState('home'), [onb, setOnb] = useState(false), [lic, setLic] = useState(false);
   const [sel, setSel] = useState(null), [flip, setFlip] = useState(false), [hint, setHint] = useState(null);
   const [modal, setModal] = useState(null); // 'new' | 'end' | {promo:[...]}
   const [paywall, setPaywall] = useState(null), [thinking, setThinking] = useState(false), [endNote, setEndNote] = useState('');
@@ -48,7 +54,9 @@ export default function App() {
     const p = await load('pref'); if (p) setPref(p);
     const doc = await load('me'), secret = await loadSecret();
     if (doc && secret) { me.current = { id: doc.id, secret, doc }; setProfile(doc); }
-    const g = await load('game'); if (g && g.v === 2 && g.moves && g.moves.length >= 2) setResume(g); else if (doc && secret) setModal('new'); else setAuth('choose');
+    const g = await load('game'); if (g && g.v === 2 && g.moves && g.moves.length >= 2) setResume(g);
+    // first launch: onboarding, then sign-in; later launches go straight to Home (sign-in only if needed)
+    if (!(await load('onboarded'))) setOnb(true); else if (!(doc && secret)) setAuth('choose');
     retryPending();
   })(); }, []);
   useEffect(() => { const sub = AppState.addEventListener('change', s => { if (s !== 'active') persist(); else retryPending(); }); return () => sub.remove(); }, []);
@@ -67,7 +75,7 @@ export default function App() {
     const g = { level: d.level, human: d.human, g: d.g, token: d.token, ranked: d.ranked, tc: d.tc, clk: d.clk.slice(), last: 0, running: false, chess: r.chess, moves: d.moves.slice(), sans: r.sans, over: null, lastMove: d.moves[d.moves.length - 1] || null, drawAsked: d.drawAsked || 0, busy: false, t0: d.t0 };
     if (g.tc.b && g.moves.length >= 2 && myTurn(g)) g.clk[sIdx(g.human)] -= Date.now() - d.saved; // time away counts
     g.last = Date.now(); g.running = g.tc.b > 0 && g.moves.length >= 2;
-    game.current = g; setFlip(g.human === -1); setResume(null); rerender();
+    game.current = g; setFlip(g.human === -1); setResume(null); setTab('play'); rerender();
     if (!myTurn(g)) botTurn();
   };
   const applyMove = (g, m) => { const mv = K.play(g.chess, m); if (!mv) return null; g.sans.push(mv.san); g.moves.push(m); g.lastMove = m; return mv; };
@@ -129,9 +137,9 @@ export default function App() {
   };
   const removePending = async tok => { const p = ((await load('pending', [])) || []).filter(x => x.token !== tok); await save('pending', p.length ? p : null); };
   const retryPending = async () => { const p = (await load('pending', [])) || []; for (const c of p) await sendClaim(c, false); };
-  const onAuthed = async j => { me.current = { id: j.id, secret: j.secret, doc: j.doc }; await saveSecret(j.secret); await saveDoc(j.doc); const had = auth; setAuth(null); if (had === 'choose' || had === 'in') setModal('new'); };
-  const signOut = () => Alert.alert('Sign out?', profile && !profile.email ? 'You are a guest – signing out will lose this guest account and its stats. Create an account first to keep them.' : 'You can sign back in any time with your email and password.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Sign out', style: 'destructive', onPress: async () => { game.current = null; await save('game', null); await save('me', null); await saveSecret(''); me.current = null; setProfile(null); rerender(); setAuth('choose'); } }]);
-  const deleteAcct = () => Alert.alert('Delete account?', 'This permanently deletes your account, stats and leaderboard entry. It cannot be undone.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete forever', style: 'destructive', onPress: async () => { try { await api('auth', { mode: 'delete', id: me.current.id, secret: me.current.secret }); game.current = null; await save('game', null); await save('me', null); await saveSecret(''); me.current = null; setProfile(null); rerender(); setAuth('choose'); } catch (e) { Alert.alert('Could not delete', e.message); } } }]);
+  const onAuthed = async j => { me.current = { id: j.id, secret: j.secret, doc: j.doc }; await saveSecret(j.secret); await saveDoc(j.doc); setAuth(null); };
+  const signOut = () => alert('Sign out?', profile && !profile.email ? 'You are a guest – signing out will lose this guest account and its stats. Create an account first to keep them.' : 'You can sign back in any time with your email and password.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Sign out', style: 'destructive', onPress: async () => { game.current = null; await save('game', null); await save('me', null); await saveSecret(''); me.current = null; setProfile(null); rerender(); setAuth('choose'); } }]);
+  const deleteAcct = () => alert('Delete account?', 'This permanently deletes your account, stats and leaderboard entry. It cannot be undone.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete forever', style: 'destructive', onPress: async () => { try { await api('auth', { mode: 'delete', id: me.current.id, secret: me.current.secret }); game.current = null; await save('game', null); await save('me', null); await saveSecret(''); me.current = null; setProfile(null); rerender(); setAuth('choose'); } catch (e) { alert('Could not delete', e.message); } } }]);
   const saveDoc = async doc => { me.current = { ...me.current, doc }; setProfile(doc); await save('me', doc); };
 
   /* ---------- input ---------- */
@@ -139,14 +147,14 @@ export default function App() {
   const targets = live && sel ? g.chess.moves({ square: sel, verbose: true }).map(m => m.to) : [];
   const onTap = s => {
     const gm = game.current; if (!gm || gm.over) return;
-    if (rv !== null) return Alert.alert('Viewing an earlier move', 'Tap ⏭ to return to the game.');
+    if (rv !== null) return alert('Viewing an earlier move', 'Tap ⏭ to return to the game.');
     if (gm.busy || !myTurn(gm)) return;
     const pc = gm.chess.get(s), mine = !!pc && pc.color === side(gm);
     if (sel && sel !== s) {
       const cand = gm.chess.moves({ square: sel, verbose: true }).filter(m => m.to === s).map(K.toUci);
       if (cand.length > 1) { setSel(null); return setModal({ promo: cand }); }
       if (cand.length === 1) { setSel(null); return humanMove(cand[0]); }
-      if (!mine) { hap.on && Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {}); setSel(null); return Alert.alert('Illegal move', gm.chess.isCheck() ? 'You are in check – get out of check first.' : 'That move is not allowed. It may leave your king in check.'); }
+      if (!mine) { hap.on && Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {}); setSel(null); return alert('Illegal move', gm.chess.isCheck() ? 'You are in check – get out of check first.' : 'That move is not allowed. It may leave your king in check.'); }
     }
     setSel(mine ? s : null);
   };
@@ -159,23 +167,23 @@ export default function App() {
   const undo = () => {
     const gm = game.current; if (!gm || gm.over || gm.busy || gm.moves.length < 2) return;
     const go = () => { setRv(null); const n = myTurn(gm) ? 2 : 1, mv = gm.moves.slice(0, gm.moves.length - n), r = K.replay(mv); if (!r) return; Object.assign(gm, { moves: mv, chess: r.chess, sans: r.sans, lastMove: mv[mv.length - 1] || null, token: null, ranked: false, running: gm.tc.b > 0 && mv.length >= 2, last: Date.now() }); setSel(null); rerender(); persist(); };
-    if (gm.ranked) Alert.alert('Take back your move?', 'Using Undo makes this game casual: no points or leaderboard result.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Undo anyway', onPress: go }]); else go();
+    if (gm.ranked) alert('Take back your move?', 'Using Undo makes this game casual: no points or leaderboard result.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Undo anyway', onPress: go }]); else go();
   };
   const hintNow = () => {
     const gm = game.current; if (!gm || gm.over || gm.busy || !myTurn(gm)) return;
     if (!billing.pro) return setPaywall('Hints are part of Chezz Pro.');
     const go = async () => { gm.token = null; gm.ranked = false; rerender(); const a = await bot.current.analyse({ moves: gm.moves.slice(), nodes: 150000, mpv: 1 }); if (!a.best) return; setHint([a.best.slice(0, 2), a.best.slice(2, 4)]); setTimeout(() => setHint(null), 3500); };
-    if (gm.ranked) Alert.alert('Use a hint?', 'Hints make this game casual: no points or leaderboard result.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Show hint', onPress: go }]); else go();
+    if (gm.ranked) alert('Use a hint?', 'Hints make this game casual: no points or leaderboard result.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Show hint', onPress: go }]); else go();
   };
   const offerDraw = async () => {
     const gm = game.current; if (!gm || gm.over || gm.busy || !myTurn(gm) || gm.moves.length < 20) return;
-    if (gm.drawAsked && gm.moves.length - gm.drawAsked < 10) return Alert.alert('Draw offer', 'Wait a few moves before offering again.');
+    if (gm.drawAsked && gm.moves.length - gm.drawAsked < 10) return alert('Draw offer', 'Wait a few moves before offering again.');
     gm.drawAsked = gm.moves.length; gm.busy = true; const at = gm.moves.length;
     const yes = await bot.current.acceptsDraw(gm.moves.slice(), gm.level).catch(() => false);
     gm.busy = false; if (game.current !== gm || gm.over || gm.moves.length !== at) return;
-    if (yes) finish(gm, 'd', 'Draw agreed', 'draw'); else { Alert.alert('Draw offer', NAMES[gm.level - 1] + ' declines the draw.'); persist(); }
+    if (yes) finish(gm, 'd', 'Draw agreed', 'draw'); else { alert('Draw offer', NAMES[gm.level - 1] + ' declines the draw.'); persist(); }
   };
-  const newGameBtn = () => { const gm = game.current; if (gm && !gm.over && gm.moves.length >= 2) Alert.alert('Leave this game?', 'Starting a new game counts as abandoning this one (no points, no result).', [{ text: 'Keep playing', style: 'cancel' }, { text: 'Leave game', style: 'destructive', onPress: () => { gm.over = { r: 'd', why: 'Abandoned', end: 'abort' }; save('game', null); setModal('new'); } }]); else setModal('new'); };
+  const newGameBtn = () => { const gm = game.current; if (gm && !gm.over && gm.moves.length >= 2) alert('Leave this game?', 'Starting a new game counts as abandoning this one (no points, no result).', [{ text: 'Keep playing', style: 'cancel' }, { text: 'Leave game', style: 'destructive', onPress: () => { gm.over = { r: 'd', why: 'Abandoned', end: 'abort' }; save('game', null); setModal('new'); } }]); else setModal('new'); };
   const pgn = () => { const gm = game.current, res = gm.over ? (gm.over.r === 'd' ? '1/2-1/2' : ((gm.over.r === 'w') === (gm.human === 1) ? (gm.human === 1 ? '1-0' : '0-1') : (gm.human === 1 ? '0-1' : '1-0'))) : '*'; let h = '[Event "Chezz vs ' + NAMES[gm.level - 1] + ' (Level ' + gm.level + ')"]\n[Result "' + res + '"]\n\n'; gm.sans.forEach((s, i) => { if (i % 2 === 0) h += (i / 2 + 1) + '. '; h += s + ' '; }); return h + res; };
 
   /* ---------- starting a new game (with the paywall gate) ---------- */
@@ -184,7 +192,7 @@ export default function App() {
     setPref(p); save('pref', p);
     const human = p.color === 'w' ? 1 : p.color === 'b' ? -1 : Math.random() < .5 ? 1 : -1, tc = TCS[0];
     const o = { level: p.level, human, tc: { b: tc.b, i: tc.i }, g: rid(), token: null };
-    if (me.current && apiEnabled()) { try { const n = await api('new', { id: me.current.id, secret: me.current.secret, level: p.level, human, base: tc.b, inc: tc.i }); o.g = n.g; o.token = n.token; } catch (e) { if (e.status === 429) Alert.alert('Take a break', e.message); } }
+    if (me.current && apiEnabled()) { try { const n = await api('new', { id: me.current.id, secret: me.current.secret, level: p.level, human, base: tc.b, inc: tc.i }); o.g = n.g; o.token = n.token; } catch (e) { if (e.status === 429) alert('Take a break', e.message); } }
     startGame(o);
   };
 
@@ -207,7 +215,7 @@ export default function App() {
       <StatusBar barStyle={settings.scheme === 'light' ? 'dark-content' : 'light-content'} />
       <BotWorker ref={bot} />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingTop: Platform.OS === 'android' ? 34 : 6, paddingBottom: 6 }}>
-        <Text style={{ color: C.tx, fontWeight: '800', fontSize: 19 }}>♞ Chezz</Text>
+        {tab === 'play' ? <Pressable onPress={() => setTab('home')} accessibilityRole="button" accessibilityLabel="Back to Home"><Text style={{ color: C.ac, fontWeight: '800', fontSize: 17 }}>‹ Home</Text></Pressable> : <Text style={{ color: C.tx, fontWeight: '800', fontSize: 19 }}>Chezz</Text>}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {!!profile && !!profile.rating && <Text style={{ color: C.mut, fontWeight: '700', fontSize: 13 }}>★ {profile.rating}</Text>}
           <Text style={{ color: playStreak ? C.gold : C.mut, fontWeight: '800', fontSize: 14 }} accessibilityLabel={playStreak + ' day play streak'}>🔥 {playStreak}</Text>
@@ -216,11 +224,6 @@ export default function App() {
 
       {tab === 'play' && (
         <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
-          {resume && <View style={{ backgroundColor: '#233a34', borderColor: C.ac, borderWidth: 1, borderRadius: 14, padding: 12, margin: 10, alignItems: 'center' }}>
-            <Text style={{ color: C.tx, fontWeight: '700' }}>Unfinished game vs {NAMES[resume.level - 1]} (Level {resume.level})</Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-              <Pressable style={[S.big, { paddingVertical: 9, paddingHorizontal: 18 }]} onPress={() => restore(resume)}><Text style={S.bigT}>Resume</Text></Pressable>
-              <Pressable style={[S.ghost, { marginTop: 0, paddingHorizontal: 18 }]} onPress={() => { save('game', null); setResume(null); setModal('new'); }}><Text style={S.ghostT}>Discard</Text></Pressable></View></View>}
           <PlayerBar icon={<Avatar level={lvl} size={30} />} name={NAMES[lvl - 1]} sub={'Lv ' + lvl} caps={botCol === 1 ? m.capW : m.capB} lead={g ? (g.human === 1 ? -m.diff : m.diff) : 0} clock={g && g.tc.b ? fmt(clk[bi]) : '--:--'} run={!!(g && g.running && !g.over && !myTurn(g))} />
           <Board fen={shown ? shown.fen() : START_FEN} check={shown ? kingSq(shown) : null} flip={flip} sel={viewing ? null : sel} targets={viewing ? null : targets} last={lastSq} hint={viewing ? null : hint} onTap={onTap} themeId={settings.theme} animate={!viewing} />
           <PlayerBar icon="🙂" name={(profile && profile.name) || 'You'} badge={g && !g.over ? (g.ranked ? 'RANKED' : 'CASUAL') : ''} caps={g && g.human === -1 ? m.capB : m.capW} lead={g ? (g.human === 1 ? m.diff : -m.diff) : 0} clock={g && g.tc.b ? fmt(clk[mi]) : '--:--'} run={!!(g && g.running && !g.over && myTurn(g))} low={!!(g && g.tc.b && clk[mi] < 10000)} />
@@ -239,9 +242,12 @@ export default function App() {
           {!billing.pro && <Pressable onPress={() => setPaywall('')} style={{ margin: 14, overflow: 'hidden', padding: 12, borderRadius: 14, backgroundColor: C.card, alignItems: 'center' }}><Image source={require('./assets/art/paywall.jpg')} style={{ width: '100%', height: 120, borderRadius: 10, marginBottom: 8 }} resizeMode="cover" /><Text style={{ color: C.gold, fontWeight: '800' }}>👑 Unlock Levels 11–50 with Chezz Pro</Text></Pressable>}
         </ScrollView>)}
 
+      {tab === 'home' && <Home profile={profile} playStreak={playStreak} resume={resume} onResume={() => restore(resume)} onDiscard={() => { save('game', null); setResume(null); }}
+        live={g && !g.over ? { level: g.level, open: () => setTab('play') } : null} onBot={() => { if (g && !g.over && g.moves.length >= 2) setTab('play'); else { setTab('play'); setModal('new'); } }} onOnline={() => setTab('online')} onPuzzles={() => setTab('puzzles')} />}
+      {tab === 'online' && <Online me={me} profile={profile} saveDoc={saveDoc} pro={billing.pro} openPaywall={setPaywall} openAuth={setAuth} themeId={settings.theme} engine={bot} haptics={settings.haptics} />}
       {tab === 'puzzles' && <Puzzles themeId={settings.theme} pro={billing.pro} openPaywall={setPaywall} />}
       {tab === 'rank' && <Rankings profile={profile} />}
-      {tab === 'me' && <Profile settings={settings} applySettings={applySettings} lastGame={lastGame} openReview={setReview} profile={profile} me={me} setProfile={setProfile} saveDoc={saveDoc} openAuth={setAuth} signOut={signOut} deleteAcct={deleteAcct} pro={billing.pro} openPaywall={() => setPaywall('')} restore={billing.restore} />}
+      {tab === 'me' && <Profile settings={settings} applySettings={applySettings} lastGame={lastGame} openReview={setReview} profile={profile} me={me} setProfile={setProfile} saveDoc={saveDoc} openAuth={setAuth} signOut={signOut} deleteAcct={deleteAcct} pro={billing.pro} openPaywall={() => setPaywall('')} restore={billing.restore} openLicences={() => setLic(true)} />}
 
       <AuthSheet visible={!!auth} start={auth === 'up' ? 'up' : auth === 'in' ? 'in' : 'choose'} me={me.current} onDone={onAuthed} onClose={() => setAuth(null)} />
       <NewGame visible={modal === 'new'} pref={pref} profile={profile} pro={billing.pro} onClose={() => setModal(null)} onStart={begin} />
@@ -272,12 +278,14 @@ export default function App() {
       </Modal>
       <Review engine={bot} visible={!!review} moves={review && review.moves} human={review ? review.human : 1} level={review ? review.level : 1} themeId={settings.theme} onClose={() => setReview(null)} />
       <View style={{ flexDirection: 'row', backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.line, paddingBottom: Platform.OS === 'ios' ? 14 : 6 }}>
-        {[['play', '♞', 'Play'], ['puzzles', '🧩', 'Puzzles'], ['rank', '🏆', 'Rankings'], ['me', '👤', 'Profile']].map(([k, ic, l]) => (
-          <Pressable key={k} onPress={() => setTab(k)} accessibilityRole="tab" accessibilityState={{ selected: tab === k }} style={{ flex: 1, alignItems: 'center', paddingVertical: 8 }}>
-            <Text style={{ fontSize: 20, color: tab === k ? C.ac : C.mut, opacity: tab === k ? 1 : .7 }}>{ic}</Text>
-            <Text style={{ color: tab === k ? C.ac : C.mut, fontWeight: '700', fontSize: 11, marginTop: 2 }}>{l}</Text></Pressable>))}
+        {[['home', 6, 'Home'], ['online', 5, 'Online'], ['puzzles', 3, 'Puzzles'], ['rank', 4, 'Rankings'], ['me', 1, 'Profile']].map(([k, pc, l]) => { const on = tab === k || (k === 'home' && tab === 'play'); return (
+          <Pressable key={k} onPress={() => setTab(k)} accessibilityRole="tab" accessibilityLabel={l} accessibilityState={{ selected: on }} style={{ flex: 1, alignItems: 'center', paddingVertical: 8, opacity: on ? 1 : .55 }}>
+            <Piece p={pc} size={24} />
+            <Text style={{ color: on ? C.ac : C.mut, fontWeight: '700', fontSize: 11, marginTop: 2 }}>{l}</Text></Pressable>); })}
       </View>
-      <Paywall visible={paywall !== null} reason={paywall} billing={billing} onClose={ok => setPaywall(null)} />
+      <Onboarding visible={onb} onDone={() => { save('onboarded', 1); setOnb(false); if (!me.current) setAuth('choose'); }} onPlans={() => { save('onboarded', 1); setOnb(false); setPaywall(''); }} />
+      <Licences visible={lic} onClose={() => setLic(false)} />
+      <Paywall visible={paywall !== null} reason={paywall} billing={billing} onClose={ok => { setPaywall(null); if (!me.current && !auth) setAuth('choose'); }} />
     </SafeAreaView>
   );
 }
@@ -335,31 +343,34 @@ function NewGame({ visible, pref, profile, pro, onClose, onStart }) {
 }
 
 function Rankings({ profile }) {
+  const [mode, setMode] = useState('bots'); // bots: points from bot games; online: live-game rating
   const [scope, setScope] = useState('world'), [rows, setRows] = useState(null), [note, setNote] = useState('');
   useEffect(() => { (async () => {
     setRows(null); setNote('');
     const d = profile || {};
     if ((scope === 'city' && !d.city) || (scope === 'state' && !d.state) || (scope !== 'world' && !d.country)) { setRows([]); return setNote('Add your place in the Profile tab to see this board.'); }
     try {
-      const q = 'scope=' + scope + '&city=' + encodeURIComponent(d.city || '') + '&state=' + encodeURIComponent(d.state || '') + '&country=' + encodeURIComponent(d.country || '') + (d.id ? '&id=' + d.id : '');
+      const q = 'scope=' + scope + '&city=' + encodeURIComponent(d.city || '') + '&state=' + encodeURIComponent(d.state || '') + '&country=' + encodeURIComponent(d.country || '') + (d.id ? '&id=' + d.id : '') + (mode === 'online' ? '&sort=online' : '');
       const j = await api('leaderboard?' + q, null, 'GET'); setRows(Array.isArray(j && j.rows) ? j.rows : []); setNote(j && j.rank ? 'Your rank: #' + j.rank + ' of ' + j.total : ((j && j.total) | 0) + ' players');
     } catch (e) { setRows([]); setNote(e.message); }
-  })(); }, [scope, profile && profile.id]);
+  })(); }, [scope, mode, profile && profile.id]);
   return (
     <ScrollView contentContainerStyle={{ padding: 12 }}>
+      <View style={{ flexDirection: 'row', backgroundColor: C.card, borderRadius: 12, padding: 4, marginBottom: 10 }}>{[['bots', 'Bot points'], ['online', 'Online rating']].map(([k, l]) => <Pressable key={k} onPress={() => setMode(k)} accessibilityRole="button" style={{ flex: 1, paddingVertical: 9, borderRadius: 9, backgroundColor: mode === k ? C.ac : 'transparent' }}><Text style={{ textAlign: 'center', fontWeight: '800', color: mode === k ? '#06261c' : C.mut }}>{l}</Text></Pressable>)}</View>
       <Image source={require('./assets/art/trophy.jpg')} style={{ width: '100%', height: 150, borderRadius: 16, marginBottom: 10 }} resizeMode="cover" accessibilityLabel="Leaderboard trophy" />
       <View style={{ flexDirection: 'row', gap: 6, marginBottom: 10 }}>{[['city', 'My City'], ['state', 'My State'], ['country', 'Country'], ['world', 'Worldwide']].map(([k, l]) => <Pressable key={k} onPress={() => setScope(k)} style={[S.btn, { backgroundColor: scope === k ? C.ac : C.card }]}><Text style={[S.btnT, { color: scope === k ? '#06261c' : C.mut }]}>{l}</Text></Pressable>)}</View>
       {rows === null ? <ActivityIndicator color={C.ac} /> : rows.map((r, i) => (
         <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.card, borderRadius: 12, padding: 10, marginBottom: 6, borderWidth: profile && profile.id === r.id ? 2 : 0, borderColor: C.ac }}>
           <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: i === 0 ? C.gold : i === 1 ? '#c3cad4' : i === 2 ? '#d08b52' : C.card2, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontWeight: '800', color: i < 3 ? '#222' : C.tx }}>{i + 1}</Text></View>
-          <View style={{ flex: 1, marginHorizontal: 10 }}><Text style={{ color: C.tx, fontWeight: '700' }} numberOfLines={1}>{r.name}</Text><Text style={S.mut} numberOfLines={1}>{[r.city, r.state, r.country].filter(Boolean).join(', ')} · best Lv {r.best || 0}</Text></View>
-          <View><Text style={{ color: C.ac, fontWeight: '800', fontSize: 17, textAlign: 'right' }}>{r.points}</Text><Text style={S.mut}>{r.w}W {r.d}D {r.l}L</Text></View>
+          <View style={{ flex: 1, marginHorizontal: 10 }}><Text style={{ color: C.tx, fontWeight: '700' }} numberOfLines={1}>{r.name}</Text><Text style={S.mut} numberOfLines={1}>{[r.city, r.state, r.country].filter(Boolean).join(', ')} {mode === 'online' ? '' : ' · best Lv ' + (r.best || 0)}</Text></View>
+          <View><Text style={{ color: C.ac, fontWeight: '800', fontSize: 17, textAlign: 'right' }}>{mode === 'online' ? r.orating : r.points}</Text><Text style={S.mut}>{mode === 'online' ? r.ow + 'W ' + r.od + 'D ' + r.ol + 'L' : r.w + 'W ' + r.d + 'D ' + r.l + 'L'}</Text></View>
         </View>))}
+      {rows !== null && !rows.length && !note.startsWith('Add') && mode === 'online' && <Text style={[S.mut, { textAlign: 'center', marginTop: 10 }]}>No online games here yet. Play one to get on this board.</Text>}
       <Text style={[S.mut, { textAlign: 'center', marginTop: 10 }]}>{note}</Text>
     </ScrollView>);
 }
 
-function Profile({ settings, applySettings, lastGame, openReview, profile, me, setProfile, saveDoc, openAuth, signOut, deleteAcct, pro, openPaywall, restore }) {
+function Profile({ settings, applySettings, lastGame, openReview, profile, me, setProfile, saveDoc, openAuth, signOut, deleteAcct, pro, openPaywall, restore, openLicences }) {
   const d = profile || { points: 0, w: 0, l: 0, d: 0, beaten: [] };
   const [f, setF] = useState({ name: d.name || '', city: d.city || '', state: d.state || '', country: d.country || '' }), [msg, setMsg] = useState('');
   useEffect(() => { setF({ name: d.name || '', city: d.city || '', state: d.state || '', country: d.country || '' }); }, [profile && profile.id]);
@@ -375,8 +386,10 @@ function Profile({ settings, applySettings, lastGame, openReview, profile, me, s
   return (
     <ScrollView contentContainerStyle={{ padding: 12 }} keyboardShouldPersistTaps="handled">
       <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16, marginBottom: 8 }}>Your player card</Text>
-        <View style={{ flexDirection: 'row', gap: 8 }}>{[['rating', 'Rating'], ['points', 'Points'], ['w', 'Wins'], ['d', 'Draws'], ['l', 'Losses']].map(([k, l]) => <View key={k} style={{ flex: 1, backgroundColor: C.card2, borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}><Text style={{ color: C.tx, fontSize: 20, fontWeight: '800' }}>{k === 'rating' ? ((d.rating | 0) || 800) : d[k] | 0}</Text><Text style={S.mut}>{l}</Text></View>)}</View></View>
-      <Pressable onPress={openPaywall} style={[S.card, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}><Text style={{ color: pro ? C.ac : C.gold, fontWeight: '800' }}>{pro ? '👑 Chezz Pro is active' : '👑 Get Chezz Pro – unlock Levels 11–50'}</Text>{!pro && <Text style={{ color: C.mut }}>›</Text>}</Pressable>
+        <View style={{ flexDirection: 'row', gap: 8 }}>{[['rating', 'Bot rating'], ['points', 'Points'], ['w', 'Wins'], ['d', 'Draws'], ['l', 'Losses']].map(([k, l]) => <View key={k} style={{ flex: 1, backgroundColor: C.card2, borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}><Text style={{ color: C.tx, fontSize: 20, fontWeight: '800' }}>{k === 'rating' ? ((d.rating | 0) || 800) : d[k] | 0}</Text><Text style={S.mut}>{l}</Text></View>)}</View></View>
+      <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16, marginBottom: 8 }}>Online games</Text>
+        <View style={{ flexDirection: 'row', gap: 8 }}>{[['orating', 'Rating'], ['opeak', 'Peak'], ['ow', 'Wins'], ['od', 'Draws'], ['ol', 'Losses']].map(([k, l]) => <View key={k} style={{ flex: 1, backgroundColor: C.card2, borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}><Text style={{ color: C.tx, fontSize: 20, fontWeight: '800' }}>{k === 'orating' || k === 'opeak' ? ((d[k] | 0) || 1000) : d[k] | 0}</Text><Text style={S.mut}>{l}</Text></View>)}</View></View>
+      <Pressable onPress={openPaywall} style={[S.card, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}><Text style={{ color: pro ? C.ac : C.gold, fontWeight: '800' }}>{pro ? '👑 Chezz Pro is active' : '👑 Get Chezz Pro – all 50 levels, unlimited online games'}</Text>{!pro && <Text style={{ color: C.mut }}>›</Text>}</Pressable>
       <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16, marginBottom: 8 }}>Settings</Text>
         {[['sound', 'Sound effects'], ['haptics', 'Haptic feedback']].map(([k, l]) => (
           <Pressable key={k} onPress={() => applySettings({ ...settings, [k]: !settings[k] })} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 }}>
@@ -405,11 +418,12 @@ function Profile({ settings, applySettings, lastGame, openReview, profile, me, s
       <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16, marginBottom: 8 }}>Levels beaten</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>{Array.from({ length: 50 }, (_, i) => i + 1).map(l => { const b = (d.beaten || []).indexOf(l) >= 0; return <View key={l} style={{ width: '9.2%', paddingVertical: 5, borderRadius: 8, alignItems: 'center', backgroundColor: b ? '#233a34' : C.card2, opacity: b ? 1 : .55 }}><Text style={{ color: b ? C.ac : C.tx, fontWeight: '800', fontSize: 12 }}>{l}</Text></View>; })}</View></View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 14, marginTop: 6 }}>
-        <Pressable onPress={() => restore().then(r => Alert.alert(r.ok ? 'Restored' : 'Nothing to restore', r.ok ? 'Chezz Pro is active.' : r.error || 'No purchases were found for this account.'))}><Text style={{ color: C.ac, fontWeight: '700' }}>Restore Purchases</Text></Pressable>
+        <Pressable onPress={() => restore().then(r => alert(r.ok ? 'Restored' : 'Nothing to restore', r.ok ? 'Chezz Pro is active.' : r.error || 'No purchases were found for this account.'))}><Text style={{ color: C.ac, fontWeight: '700' }}>Restore Purchases</Text></Pressable>
         <Pressable onPress={() => Linking.openURL(TERMS_URL)}><Text style={S.mut}>Terms of Use (EULA)</Text></Pressable>
         <Pressable onPress={() => Linking.openURL(PRIVACY_URL)}><Text style={S.mut}>Privacy Policy</Text></Pressable>
         <Pressable onPress={() => Linking.openURL(SUPPORT_URL)}><Text style={S.mut}>Support</Text></Pressable>
-        <Text style={[S.mut, { width: '100%', textAlign: 'center', fontSize: 11 }]}>Chess pieces: Chessnut by Alexis Luengas, Apache License 2.0</Text>
+        <Pressable onPress={openLicences}><Text style={{ color: C.ac, fontWeight: '700' }}>Licences & source code</Text></Pressable>
+        <Text style={[S.mut, { width: '100%', textAlign: 'center', fontSize: 11 }]}>Chezz is free software (GPLv3). Engine: Stockfish. Chess pieces: Chessnut by Alexis Luengas.</Text>
       </View>
     </ScrollView>);
 }

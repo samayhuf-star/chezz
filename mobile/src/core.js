@@ -3767,10 +3767,145 @@ var require_sfdriver = __commonJS({
   }
 });
 
+// core/live.js
+var require_live = __commonJS({
+  "core/live.js"(exports2, module2) {
+    var rules2 = require_rules();
+    var BASE_MS = 7 * 60 * 1e3;
+    var START_GRACE_MS = 45 * 1e3;
+    var START_RATING = 1e3;
+    var kFor = (games) => games < 20 ? 32 : 20;
+    function elo(ra, rb, score, k) {
+      const exp = 1 / (1 + Math.pow(10, (rb - ra) / 400));
+      return Math.max(100, Math.round(ra + k * (score - exp)));
+    }
+    function newRoom(players, now, baseMs) {
+      const base = baseMs || BASE_MS;
+      return { n: 1, players, moves: [], clk: [base, base], base, last: now, created: now, running: false, over: null, drawOffer: null, rematch: {}, settled: false };
+    }
+    var sideOf = (g, id) => g.players.w.id === id ? "w" : g.players.b.id === id ? "b" : null;
+    var turnOf = (g) => g.moves.length % 2 === 0 ? "w" : "b";
+    var idx = (s) => s === "w" ? 0 : 1;
+    var other = (s) => s === "w" ? "b" : "w";
+    var end = (g, r, why) => {
+      g.over = { r, why };
+      g.running = false;
+      g.drawOffer = null;
+    };
+    function clocks(g, now) {
+      const c = g.clk.slice();
+      if (g.running && !g.over) c[idx(turnOf(g))] = Math.max(0, c[idx(turnOf(g))] - (now - g.last));
+      return c;
+    }
+    function tick(g, now) {
+      if (g.over) return false;
+      if (!g.running) {
+        if (now - g.created >= START_GRACE_MS) {
+          end(g, "d", "Game aborted");
+          g.aborted = true;
+          return true;
+        }
+        return false;
+      }
+      const t = turnOf(g);
+      if (clocks(g, now)[idx(t)] <= 0) {
+        g.clk[idx(t)] = 0;
+        end(g, other(t), "Won on time");
+        return true;
+      }
+      return false;
+    }
+    function nextWake(g) {
+      if (g.over) return null;
+      return g.running ? g.last + g.clk[idx(turnOf(g))] : g.created + START_GRACE_MS;
+    }
+    function move(g, side, uci, now) {
+      if (g.over) return { error: "Game is over" };
+      if (tick(g, now)) return {};
+      if (side !== turnOf(g)) return { error: "Not your turn" };
+      const r = rules2.replay(g.moves);
+      if (!r || !rules2.play(r.chess, uci)) return { error: "Illegal move" };
+      if (g.running) g.clk[idx(side)] -= now - g.last;
+      g.moves.push(uci);
+      g.last = now;
+      g.running = g.moves.length >= 2;
+      g.drawOffer = g.drawOffer === side ? side : null;
+      const o = rules2.outcome(r.chess);
+      if (o) end(g, o.r, o.why);
+      return {};
+    }
+    function resign(g, side, now) {
+      if (g.over) return { error: "Game is over" };
+      if (tick(g, now)) return {};
+      if (g.moves.length < 2) {
+        end(g, "d", "Game aborted");
+        g.aborted = true;
+      } else end(g, other(side), "Resignation");
+      return {};
+    }
+    function draw(g, side, now) {
+      if (g.over) return { error: "Game is over" };
+      if (tick(g, now)) return {};
+      if (g.moves.length < 2) return { error: "Too early for a draw" };
+      if (g.drawOffer === other(side)) end(g, "d", "Draw agreed");
+      else g.drawOffer = side;
+      return {};
+    }
+    function decline(g, side) {
+      if (g.drawOffer === other(side)) g.drawOffer = null;
+      return {};
+    }
+    function rematch(g, side, now, ratings) {
+      if (!g.over) return { error: "Game is not over" };
+      g.rematch[side] = true;
+      if (!(g.rematch.w && g.rematch.b)) return {};
+      const p = { w: Object.assign({}, g.players.b), b: Object.assign({}, g.players.w) };
+      if (ratings) {
+        p.w.rating = ratings[p.w.id] || p.w.rating;
+        p.b.rating = ratings[p.b.id] || p.b.rating;
+      }
+      Object.assign(g, newRoom(p, now, g.base), { n: g.n + 1, aborted: false, result: null });
+      return { restarted: true };
+    }
+    function settle(g, games) {
+      const rw = g.players.w.rating, rb = g.players.b.rating;
+      if (!g.over || g.aborted) return { w: rw, b: rb, dw: 0, db: 0 };
+      const sw = g.over.r === "w" ? 1 : g.over.r === "d" ? 0.5 : 0;
+      const nw = elo(rw, rb, sw, kFor(games.w)), nb = elo(rb, rw, 1 - sw, kFor(games.b));
+      return { w: nw, b: nb, dw: nw - rw, db: nb - rb };
+    }
+    function view(g, you, now) {
+      const pub = (p) => ({ name: p.name, rating: p.rating, country: p.country || "" });
+      return { t: "state", n: g.n, you, w: pub(g.players.w), b: pub(g.players.b), moves: g.moves, clk: clocks(g, now), turn: turnOf(g), running: g.running, over: g.over, result: g.result || null, drawOffer: g.drawOffer, rematch: g.rematch, base: g.base };
+    }
+    var gapFor = (waitedMs) => 150 + Math.floor(waitedMs / 5e3) * 100;
+    function pairUp(queue, now) {
+      const q = queue.slice().sort((a, b) => a.since - b.since), used = /* @__PURE__ */ new Set(), pairs = [];
+      for (const a of q) {
+        if (used.has(a.id)) continue;
+        let best = null;
+        for (const b of q) {
+          if (b.id === a.id || used.has(b.id)) continue;
+          const gap = Math.abs(a.rating - b.rating);
+          if (gap <= gapFor(now - Math.min(a.since, b.since)) && (!best || gap < Math.abs(a.rating - best.rating))) best = b;
+        }
+        if (best) {
+          used.add(a.id);
+          used.add(best.id);
+          pairs.push([a, best]);
+        }
+      }
+      return pairs;
+    }
+    module2.exports = { BASE_MS, START_GRACE_MS, START_RATING, elo, kFor, newRoom, sideOf, turnOf, clocks, tick, nextWake, move, resign, draw, decline, rematch, settle, view, gapFor, pairUp };
+  }
+});
+
 // core/index.js
 var rules = require_rules();
 var bot = require_bot();
 var sf = require_sfdriver();
+var live = require_live();
 async function botMove(driver, moves, level, gameId) {
   const r = rules.replay(moves);
   if (!r) return null;
@@ -3784,4 +3919,4 @@ async function botAcceptsDraw(driver, moves, level) {
   const { lines } = await driver.search({ moves, nodes: bot.DRAW_NODES, mpv: 1 });
   return lines.length ? bot.acceptsDraw(-lines[0].cp, level, moves.length) : false;
 }
-module.exports = Object.assign({ botMove, botAcceptsDraw }, rules, bot, sf);
+module.exports = Object.assign({ botMove, botAcceptsDraw, live }, rules, bot, sf);

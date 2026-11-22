@@ -1,5 +1,7 @@
 // Public configuration. Set these as EAS environment variables (EXPO_PUBLIC_*) in expo.dev.
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/$/, '');
+// In the browser build the API is the site the page came from.
+const WEB_ORIGIN = typeof window !== 'undefined' && window.location && /^https?:/.test(window.location.origin || '') ? window.location.origin : '';
+export const API_URL = (process.env.EXPO_PUBLIC_API_URL || WEB_ORIGIN).replace(/\/$/, '');
 export const RC_IOS_KEY = process.env.EXPO_PUBLIC_RC_IOS_KEY || '';
 export const RC_ANDROID_KEY = process.env.EXPO_PUBLIC_RC_ANDROID_KEY || '';
 export const ENTITLEMENT = 'pro';
@@ -16,3 +18,6 @@ export const PRIVACY_URL = process.env.EXPO_PUBLIC_PRIVACY_URL || 'https://chezz
 export const TERMS_URL = process.env.EXPO_PUBLIC_TERMS_URL || 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
 export const SUPPORT_URL = 'https://chezz.samayhuf.workers.dev/support.html';
 export const SUPPORT_EMAIL = 'samayhuf@gmail.com';
+export const FREE_ONLINE_PER_DAY = 5; // live games a day without Chezz Pro
+export const SOURCE_URL = 'https://github.com/samayhuf-star/chezz';
+export const GPL_URL = 'https://www.gnu.org/licenses/gpl-3.0.html';
