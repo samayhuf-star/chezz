@@ -8,7 +8,7 @@ import { FREE_LEVELS, FREE_ONLINE_PER_DAY } from './config';
 const SLIDES = [
   { img: require('../assets/art/hero.jpg'), title: '50 bots,\none real engine.', body: 'Every level runs on Stockfish, tuned from first-timer to grandmaster. Each bot has its own face and name.' },
   { img: require('../assets/art/paywall.jpg'), title: 'Play real people,\nlive.', body: 'Tap Play online and get matched with a player near your rating. 7 minutes each, and the winner takes the rating points.' },
-  { img: require('../assets/art/trophy.jpg'), title: 'Own your city.', body: 'Climb the leaderboard for your city, state and country, then take on the world.' },
+  { img: require('../assets/art/trophy.jpg'), title: 'Win it for\nyour city.', body: 'Every ranked point you win is added to your city. A new City vs City season starts every month.' },
 ];
 const PERKS = [
   [5, 'All 50 bot levels', 'Free covers levels 1 to ' + FREE_LEVELS + '. Pro opens Club, Advanced and Master.'],
@@ -34,7 +34,7 @@ export default function Onboarding({ visible, onDone, onPlans }) {
           </View>
         ) : (
           <ScrollView contentContainerStyle={{ padding: 20, paddingTop: Platform.OS === 'android' ? 44 : 20 }}>
-            <Text style={{ color: C.gold, fontWeight: '800', letterSpacing: 1 }}>CHEZZ PRO</Text>
+            <Text style={{ color: C.gold, fontWeight: '800', letterSpacing: 1 }}>CHESZ PRO</Text>
             <Text style={{ color: C.tx, fontWeight: '800', fontSize: 28, marginTop: 4, marginBottom: 14 }}>{"Here's what you get"}</Text>
             {PERKS.map(([p, t, d]) => (
               <View key={t} style={[S.card, { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 }]}><View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: C.card2, alignItems: 'center', justifyContent: 'center' }}><Piece p={p} size={32} /></View>
