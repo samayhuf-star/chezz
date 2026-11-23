@@ -26,7 +26,7 @@ export default function Profile({ profile, playStreak, pro, lastGame, openReview
         <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: C.ac, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#06261c', fontWeight: '800', fontSize: 28 }}>{String(d.name || '?')[0].toUpperCase()}</Text></View>
         <View style={{ marginLeft: 14, flex: 1 }}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 22 }} numberOfLines={1}>{d.name || 'Not signed in'}</Text>
           <Text style={S.mut} numberOfLines={1}>{place || (profile ? 'Add your city in Settings to join local leaderboards' : 'Sign in to keep your stats')}</Text>
-          <Text style={{ color: pro ? C.gold : C.mut, fontWeight: '800', marginTop: 3, fontSize: 12 }}>{pro ? 'CHEZZ PRO' : profile && profile.guest ? 'GUEST' : 'FREE'}</Text></View></View>
+          <Text style={{ color: pro ? C.gold : C.mut, fontWeight: '800', marginTop: 3, fontSize: 12 }}>{pro ? 'CHESZ PRO' : profile && profile.guest ? 'GUEST' : 'FREE'}</Text></View></View>
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <View style={[S.card, { flex: 1, alignItems: 'center' }]}><Text style={S.mut}>BOT RATING</Text><Text style={{ color: C.tx, fontWeight: '800', fontSize: 30 }}>{(d.rating | 0) || 800}</Text><Text style={[S.mut, { fontSize: 12 }]}>Best level beaten: {d.best | 0}</Text></View>
         <View style={[S.card, { flex: 1, alignItems: 'center' }]}><Text style={S.mut}>ONLINE RATING</Text><Text style={{ color: C.tx, fontWeight: '800', fontSize: 30 }}>{(d.orating | 0) || 1000}</Text><Text style={[S.mut, { fontSize: 12 }]}>Peak {(d.opeak | 0) || 1000}</Text></View></View>

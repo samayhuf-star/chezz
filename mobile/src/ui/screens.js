@@ -58,7 +58,7 @@ export const Onboard3 = () => <Onboard at={2} img={require('../../assets/art/tro
 
 export const WhatYouGet = () => (
   <Screen pad={20}>
-    <Text style={{ color: C.gold, fontWeight: '800', letterSpacing: 1 }}>CHEZZ PRO</Text>
+    <Text style={{ color: C.gold, fontWeight: '800', letterSpacing: 1 }}>CHESZ PRO</Text>
     <Text style={{ color: C.tx, fontWeight: '800', fontSize: 28, marginTop: 4, marginBottom: 14 }}>{"Here's what you get"}</Text>
     {[[5, 'All 50 bot levels', 'Free covers levels 1 to 10. Pro opens Club, Advanced and Master.'], [2, 'Unlimited online games', 'Free players get 5 live games a day.'], [3, 'Full game review', 'Accuracy, best moves and an evaluation chart, powered by Stockfish.'], [4, 'Hints while you play', 'Ask the engine for the best move in casual games.'], [6, '4 extra board themes', 'Walnut, Slate, Rosewood and Midnight.'], [1, 'All 223 puzzles', 'Plus the daily puzzle and streak.']].map(([p, t, d]) => (
       <Row key={t} style={[S.card, { paddingVertical: 12 }]}><View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: C.card2, alignItems: 'center', justifyContent: 'center' }}><Piece p={p} size={32} /></View>
@@ -215,7 +215,7 @@ export const Rankings = () => (
 
 export const Profile = () => (
   <View style={{ flex: 1 }}><Screen>
-    <Row style={{ marginBottom: 14 }}><Face name="Samay" size={64} col={C.ac} /><View style={{ marginLeft: 14 }}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 22 }}>Samay</Text><Text style={S.mut}>Ghaziabad, Uttar Pradesh, India</Text><Text style={{ color: C.gold, fontWeight: '800', marginTop: 3, fontSize: 12 }}>CHEZZ PRO</Text></View></Row>
+    <Row style={{ marginBottom: 14 }}><Face name="Samay" size={64} col={C.ac} /><View style={{ marginLeft: 14 }}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 22 }}>Samay</Text><Text style={S.mut}>Ghaziabad, Uttar Pradesh, India</Text><Text style={{ color: C.gold, fontWeight: '800', marginTop: 3, fontSize: 12 }}>CHESZ PRO</Text></View></Row>
     <Row style={{ gap: 10 }}>
       <View style={[S.card, { flex: 1, alignItems: 'center' }]}><Text style={S.mut}>BOT RATING</Text><Text style={{ color: C.tx, fontWeight: '800', fontSize: 30 }}>1240</Text><Text style={[S.mut, { fontSize: 12 }]}>Best level beaten: 12</Text></View>
       <View style={[S.card, { flex: 1, alignItems: 'center' }]}><Text style={S.mut}>ONLINE RATING</Text><Text style={{ color: C.tx, fontWeight: '800', fontSize: 30 }}>1085</Text><Text style={[S.mut, { fontSize: 12 }]}>Peak 1121</Text></View></Row>

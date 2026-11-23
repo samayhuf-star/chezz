@@ -6,6 +6,6 @@ jobs:
     name: Capture screenshots
     type: maestro
     params:
-      build_id: 29c275d7-a748-469a-8fb6-03d9b459134d
+      build_id: 9a656ee6-9c52-4c76-bfec-3aa33129e7a0
       flow_path: .maestro/store-shots.yaml
       device_identifier: iPhone 16 Pro Max
