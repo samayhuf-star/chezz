@@ -1,11 +1,13 @@
 const L = require('./_lib.js');
 const crypto = require('crypto');
+const { verifyAppleToken } = require('./_apple.js');
+const appleKey = sub => 'apple/' + L.sha(sub) + '.json';
 const EMAIL_RE = /^[^\s@<>]{1,64}@[^\s@<>]{1,255}\.[^\s@<>]{2,}$/;
 const newDoc = (name) => ({ id: crypto.randomBytes(8).toString('hex'), name, city: '', state: '', country: '', points: 0, w: 0, l: 0, d: 0, best: 0, games: 0, beaten: [], claimed: [], created: Date.now() });
 const reply = (res, doc, secret) => res.status(200).json({ id: doc.id, secret, doc: L.myDoc(doc) });
 const addSession = (doc) => { const s = crypto.randomBytes(16).toString('hex'); doc.sessions = (doc.sessions || []).concat(L.sha(s)).slice(-5); return s; };
 
-// guest | register | login  (guests can later register to keep their stats)
+// guest | apple | register | login  (guests can later register, or sign in with Apple, to keep their stats)
 module.exports = L.handler('POST', async (req, res, b) => {
   const mode = b.mode;
   if (mode === 'guest') {
@@ -18,8 +20,27 @@ module.exports = L.handler('POST', async (req, res, b) => {
     const doc = await L.loadPlayer(b.id);
     if (!L.authOK(doc, b.secret)) return res.status(403).json({ error: 'Not signed in' });
     if (doc.email) await L.store.delJSON(L.emailKey(doc.email));
+    if (doc.apple) await L.store.delJSON('apple/' + doc.apple + '.json');
     await L.store.delJSON('players/' + doc.id + '.json');
     return res.status(200).json({ deleted: true });
+  }
+  if (mode === 'apple') { // Sign in with Apple: the app sends the identity token Apple gave it
+    let claims = null; try { claims = await verifyAppleToken(b.identityToken); } catch (e) { return res.status(503).json({ error: 'Could not check with Apple. Try again.' }); }
+    if (!claims) return res.status(401).json({ error: 'Apple sign-in could not be verified' });
+    const ref = await L.store.getJSON(appleKey(claims.sub));
+    let doc = ref && await L.loadPlayer(ref.id), secret;
+    if (doc) { secret = addSession(doc); await L.savePlayer(doc); return reply(res, doc, secret); } // returning player
+    if (b.id) { // first Apple sign-in on a device that already has a guest: keep that guest's stats
+      doc = await L.loadPlayer(b.id);
+      if (!L.authOK(doc, b.secret)) return res.status(403).json({ error: 'Not signed in' });
+      if (doc.email || doc.apple) doc = null; else secret = b.secret;
+    }
+    if (!doc) { doc = newDoc(L.clean(b.name, 24) || 'Player ' + (1000 + crypto.randomInt(9000))); secret = crypto.randomBytes(16).toString('hex'); doc.secretHash = L.sha(secret); }
+    else if (/^Guest \d+$/.test(doc.name) && L.clean(b.name, 24) && !L.badText(L.clean(b.name, 24))) doc.name = L.clean(b.name, 24);
+    if (L.badText(doc.name)) doc.name = 'Player ' + (1000 + crypto.randomInt(9000));
+    doc.apple = L.sha(claims.sub);
+    await L.savePlayer(doc); await L.store.putJSON(appleKey(claims.sub), { id: doc.id });
+    return reply(res, doc, secret);
   }
   const email = String(b.email || '').trim().toLowerCase();
   if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Enter a valid email address' });

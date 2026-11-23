@@ -31,20 +31,23 @@ export function trialDays(product) {
 export function describePlan(pkg, products) {
   const product = (pkg && pkg.product) || {};
   const id = product.identifier || '';
-  const kind = product.productType;
+  const kind = product.productType, price = product.priceString;
+  // one-time purchase: no period, no renewal
+  if ((pkg && pkg.packageType === 'LIFETIME') || (products && id && id === products.lifetime)) return price ? { title: 'Chesz Pro Lifetime', length: 'lifetime', price, trial: 0, once: true, key: (pkg && pkg.identifier) || id } : null;
   if (kind && kind !== 'AUTO_RENEWABLE_SUBSCRIPTION' && kind !== 'UNKNOWN') return null;
   let length = lengthFromPeriod(product.subscriptionPeriod);
   if (!length) length = BY_TYPE[pkg && pkg.packageType] || '';
   if (!length && products) {
     if (id === products.weekly) length = '1 week';
+    else if (id === products.monthly) length = '1 month';
+    else if (id === products.yearly) length = '1 year';
   }
-  const price = product.priceString;
   if (!length || !price) return null;
   const title = length === '1 week' ? 'Chesz Pro Weekly' : length === '1 year' ? 'Chesz Pro Yearly' : length === '1 month' ? 'Chesz Pro Monthly' : 'Chesz Pro (' + length + ')';
   return { title, length, price, trial: trialDays(product), key: (pkg && pkg.identifier) || id };
 }
 
 export function sortPlans(plans) {
-  const rank = p => (p.length === '1 week' ? 0 : p.length === '1 year' ? 1 : p.length === '1 month' ? 2 : 3);
+  const rank = p => (p.length === '1 year' ? 0 : p.length === '1 month' ? 1 : p.length === '1 week' ? 2 : p.once ? 3 : 4);
   return plans.slice().sort((a, b) => rank(a) - rank(b) || a.title.localeCompare(b.title));
 }

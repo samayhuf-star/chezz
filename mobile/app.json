@@ -26,7 +26,8 @@
             ]
           }
         ]
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "com.samayvashsht.chezz",
@@ -38,6 +39,14 @@
       }
     },
     "plugins": [
+      [
+        "onesignal-expo-plugin",
+        {
+          "mode": "production",
+          "disableNSE": true,
+          "disableLocation": true
+        }
+      ],
       "expo-secure-store",
       "expo-build-properties",
       "expo-status-bar",
@@ -51,7 +60,8 @@
         }
       ],
       "expo-audio",
-      "expo-asset"
+      "expo-asset",
+      "expo-apple-authentication"
     ],
     "extra": {
       "eas": {
@@ -59,6 +69,6 @@
       },
       "privacyPolicyUrl": "https://chezz.samayhuf.workers.dev/privacy.html"
     },
-    "description": "Play chess against 50 bot levels with real clocks and climb the city, state, country and world leaderboards."
+    "description": "Play chess against 50 bots and real players, and win points for your city in the monthly City vs City season."
   }
 }

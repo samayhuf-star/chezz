@@ -1,19 +1,17 @@
-const E=require('../public/engine.js');
-function play(wl,bl,gid){
-  const G=E.newGame(),keys=[E.posKey(G)];let ply=0,maxMs=[0,0];
-  while(ply<240){
-    const o=E.outcome(G,keys);if(o)return o.r==='w'?1:o.r==='b'?-1:0;
-    const lvl=G.t===1?wl:bl,t0=Date.now();
-    const m=E.think(G,lvl,E.botSeed(gid,ply));const dt=Date.now()-t0;
-    if(dt>maxMs[G.t===1?0:1])maxMs[G.t===1?0:1]=dt;
-    if(!E.legalMoves(G,false).includes(m)){console.log('ILLEGAL');return null;}
-    E.make(G,m);keys.push(E.posKey(G));ply++;
+// Strength ladder: each pair of levels plays a short match (colours alternate). Higher level should score more.
+const C = require('../core'), d = require('../core/node-engine')();
+const pairs = (process.argv[2] || '1:6,6:12,12:20,20:30,30:40,40:50').split(',').map(p => p.split(':').map(Number)), N = +(process.argv[3] || 6);
+(async () => {
+  let bad = 0;
+  for (const [lo, hi] of pairs) {
+    let score = 0, plies = 0;
+    for (let g = 0; g < N; g++) {
+      const hiWhite = g % 2 === 0, moves = [], chess = new C.Chess(), id = 'arena' + lo + '-' + hi + '-' + g;
+      let o = null;
+      while (!(o = C.outcome(chess)) && moves.length < 240) { const lv = (moves.length % 2 === 0) === hiWhite ? hi : lo, m = await C.botMove(d, moves, lv, id); C.play(chess, m); moves.push(m); }
+      score += !o || o.r === 'd' ? 0.5 : (o.r === 'w') === hiWhite ? 1 : 0; plies += moves.length;
+    }
+    console.log('Level ' + hi + ' vs Level ' + lo + ': ' + score + ' / ' + N + '  (avg ' + Math.round(plies / N) + ' plies)'); if (score <= N / 2) bad++;
   }
-  return 0;
-}
-const pairs=[[50,40],[40,30],[30,20],[20,10],[10,5],[5,2],[2,1],[50,25]];
-const N=+process.argv[2]||4;
-for(const [hi,lo] of pairs){let s=0;for(let g=0;g<N;g++)s+=g%2===0?play(hi,lo,'g'+g):-play(lo,hi,'g'+g);console.log(`L${hi} vs L${lo}: ${s}/${N}`);}
-// determinism + speed
-const G=E.newGame();let t0=Date.now();const a=E.think(G,50,123),ms=Date.now()-t0;const b=E.think(G,50,123);
-console.log('L50 opening ms',ms,'deterministic',a===b);
+  d.close(); process.exit(bad ? 1 : 0);
+})();

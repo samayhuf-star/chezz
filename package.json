@@ -4,12 +4,19 @@
   "private": true,
   "scripts": {
     "deploy": "bash scripts/deploy-cloudflare.sh",
-    "deploy:local": "bash scripts/deploy-cloudflare.sh --local"
+    "deploy:local": "bash scripts/deploy-cloudflare.sh --local",
+    "build:core": "node scripts/build-core.js",
+    "test": "node test/core.js && node test/live.js && node test/api.js && node test/auth.js && node test/apple.js && node test/features.js",
+    "build:web": "bash scripts/build-web.sh"
   },
   "dependencies": {
-    "@vercel/blob": "^1.0.0"
+    "@vercel/blob": "^1.0.0",
+    "chess.js": "^1.4.0",
+    "stockfish": "^19.0.1"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "wrangler": "^4.160.0"
-  }
+  },
+  "license": "GPL-3.0-or-later"
 }

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, View, Text, Pressable, ScrollView, SafeAreaView, Platform } from 'react-native';
-import * as E from './engine';
+import * as E from './core';
 import Board from './Board';
 import Avatar from './Avatar';
 import { C, S } from './theme';
@@ -12,29 +12,33 @@ const KINDS = [
   { k: 'mist', t: 'Mistake', c: '#ff9f43', max: 300 }, { k: 'blun', t: 'Blunder', c: '#ff6b6b', max: 1e9 },
 ];
 const kindOf = loss => KINDS.find(x => loss <= x.max);
-const fmtEval = s => (Math.abs(s) > E.MATE - 100 ? (s > 0 ? '+M' : '-M') + Math.max(1, Math.ceil((E.MATE - Math.abs(s)) / 2)) : (s >= 0 ? '+' : '') + (s / 100).toFixed(1));
+const fmtEval = s => (Math.abs(s) > E.MATE - 1000 ? (s > 0 ? '+M' : '-M') + Math.max(1, E.MATE - Math.abs(s)) : (s >= 0 ? '+' : '') + (s / 100).toFixed(1));
 
-// Post-game review: the engine looks at every position, grades each move, and shows the best alternative.
-export default function Review({ visible, moves, human, level, themeId, onClose }) {
+// Post-game review: Stockfish scores every position; a move's grade is how much it gave up against the best move.
+const REVIEW_NODES = 12000;
+export default function Review({ visible, moves, human, level, oppName, themeId, engine, onClose }) {
+  const opp = oppName || NAMES[level - 1]; // a bot (level) or a live opponent (oppName)
   const [res, setRes] = useState(null), [prog, setProg] = useState(0), [ply, setPly] = useState(0);
   const sans = useMemo(() => { const r = moves && E.replay(moves); return r ? r.sans : []; }, [moves]);
   useEffect(() => {
     if (!visible || !moves) return;
     let dead = false; setRes(null); setProg(0); setPly(0);
     (async () => {
-      const G = E.newGame(), out = [];
+      // score[i]: Stockfish's view of the position after i plies, from the side to move; best[i]: its move there
+      const end = E.outcome(E.replay(moves).chess), score = [], best = [], out = [];
+      for (let i = 0; i <= moves.length; i++) {
+        if (i === moves.length && end) { score.push(end.r === 'd' ? 0 : -E.MATE); best.push(null); }
+        else { const a = await engine.current.analyse({ moves: moves.slice(0, i), nodes: REVIEW_NODES, mpv: 1 }); score.push(a.lines.length ? a.lines[0].cp : 0); best.push(a.best); }
+        if (dead) return; setProg(Math.min(i, moves.length));
+      }
       for (let i = 0; i < moves.length; i++) {
-        const a = E.analyze(G, 3, 14000), m = moves[i], ent = a.all.find(x => x[1] === m);
-        const bs = a.all.length ? a.all[0][0] : 0, ps = ent ? ent[0] : bs;
-        const loss = a.all.length ? Math.max(0, CL(bs) - CL(ps)) : 0, mover = G.t;
-        out.push({ best: a.move, bs, ps, loss: m === a.move ? 0 : loss, mover, white: ps * mover });
-        E.make(G, m); setProg(i + 1);
-        await new Promise(r => setTimeout(r, 0)); if (dead) return;
+        const mover = i % 2 === 0 ? 1 : -1, bs = score[i], ps = -score[i + 1];
+        out.push({ best: best[i], bs, ps, loss: moves[i] === best[i] ? 0 : Math.max(0, CL(bs) - CL(ps)), mover, white: ps * mover });
       }
       setRes(out);
     })();
     return () => { dead = true; };
-  }, [visible, moves]);
+  }, [visible, moves, engine]);
 
   const sum = useMemo(() => {
     if (!res) return null;
@@ -43,10 +47,10 @@ export default function Review({ visible, moves, human, level, themeId, onClose 
     [1, -1].forEach(m => { const s = side[m]; s.acc = s.n ? Math.round(100 * Math.exp(-(s.loss / s.n) / 120)) : 100; });
     return side;
   }, [res]);
-  const view = useMemo(() => { const r = moves && E.replay(moves.slice(0, ply)); return r ? r.G : E.newGame(); }, [moves, ply]);
+  const view = useMemo(() => { const r = moves && E.replay(moves.slice(0, ply)); return (r ? r.chess : new E.Chess()).fen(); }, [moves, ply]);
   const r = res && ply > 0 ? res[ply - 1] : null, kind = r ? kindOf(r.loss) : null;
-  const lastSq = ply > 0 ? [moves[ply - 1] & 127, (moves[ply - 1] >> 7) & 127] : null;
-  const bestAlt = r && r.loss > 50 ? r.best : 0;
+  const lastSq = ply > 0 ? [moves[ply - 1].slice(0, 2), moves[ply - 1].slice(2, 4)] : null;
+  const bestAlt = r && r.loss > 50 ? r.best : null;
   const nextBad = dir => { if (!res) return; for (let i = ply + (dir > 0 ? 0 : -2); i >= 0 && i < res.length; i += dir) if (res[i].loss > 120) return setPly(i + 1); };
   if (!moves) return null;
   const me = human === 1 ? 1 : -1;
@@ -65,15 +69,15 @@ export default function Review({ visible, moves, human, level, themeId, onClose 
             <Pressable onPress={onClose}><Text style={{ color: C.ac, fontWeight: '800', fontSize: 16 }}>Done</Text></Pressable>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, marginBottom: 6 }}>
-            <Avatar level={level} size={26} /><Text style={{ color: C.mut, marginLeft: 8 }}>{NAMES[level - 1]} (Lv {level})</Text>
+            {!oppName && <Avatar level={level} size={26} />}<Text style={{ color: C.mut, marginLeft: oppName ? 0 : 8 }}>{oppName ? 'vs ' + oppName : opp + ' (Lv ' + level + ')'}</Text>
           </View>
-          <Board G={view} flip={human === -1} last={lastSq} arrow={bestAlt ? [bestAlt & 127, (bestAlt >> 7) & 127] : null} themeId={themeId} animate />
+          <Board fen={view} flip={human === -1} last={lastSq} arrow={bestAlt ? [bestAlt.slice(0, 2), bestAlt.slice(2, 4)] : null} themeId={themeId} animate />
           {!res ? <Text style={[S.mut, { textAlign: 'center', marginTop: 14 }]}>Analysing… {prog}/{moves.length}</Text> : (
             <View style={{ paddingHorizontal: 12, marginTop: 10 }}>
               <View style={[S.card, { minHeight: 70 }]}>
                 {ply === 0 ? <Text style={{ color: C.mut }}>Step through the game. Mistakes show the better move in green.</Text> : <>
                   <Text style={{ color: C.tx, fontWeight: '800', fontSize: 16 }}>{Math.ceil(ply / 2)}{ply % 2 ? '.' : '…'} {sans[ply - 1]}  <Text style={{ color: kind.c }}>{kind.t}</Text>  <Text style={{ color: C.mut, fontWeight: '600' }}>{fmtEval(r.white)}</Text></Text>
-                  {bestAlt ? <Text style={{ color: C.mut, marginTop: 4 }}>Better was <Text style={{ color: '#56b886', fontWeight: '800' }}>{E.moveName(bestAlt)}</Text> (highlighted).</Text> : <Text style={{ color: C.mut, marginTop: 4 }}>{kind.k === 'best' ? 'The engine\'s top choice.' : 'A solid move.'}</Text>}
+                  {bestAlt ? <Text style={{ color: C.mut, marginTop: 4 }}>Better was <Text style={{ color: '#56b886', fontWeight: '800' }}>{bestAlt.slice(0, 2) + ' → ' + bestAlt.slice(2)}</Text> (highlighted).</Text> : <Text style={{ color: C.mut, marginTop: 4 }}>{kind.k === 'best' ? 'The engine\'s top choice.' : 'A solid move.'}</Text>}
                 </>}
               </View>
               <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
@@ -87,14 +91,14 @@ export default function Review({ visible, moves, human, level, themeId, onClose 
                 <Pressable style={S.btn} onPress={() => nextBad(1)}><Text style={S.btnT}>Next mistake ›</Text></Pressable>
               </View>
               <Text style={[S.label, { marginTop: 14 }]}>ACCURACY</Text>
-              <View style={{ flexDirection: 'row', gap: 8 }}><Row who="You" m={me} /><Row who={NAMES[level - 1]} m={-me} /></View>
+              <View style={{ flexDirection: 'row', gap: 8 }}><Row who="You" m={me} /><Row who={opp} m={-me} /></View>
               <Text style={[S.label, { marginTop: 14 }]}>EVALUATION</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', height: 64, backgroundColor: C.card, borderRadius: 12, overflow: 'hidden' }}>
                 {res.map((x, i) => { const v = Math.max(-1, Math.min(1, x.white / 600)); return (
                   <Pressable key={i} onPress={() => setPly(i + 1)} style={{ flex: 1, height: 64, justifyContent: 'center', backgroundColor: ply === i + 1 ? C.card2 : 'transparent' }}>
                     <View style={{ position: 'absolute', left: 0, right: 0, bottom: v >= 0 ? 32 : 32 - Math.abs(v) * 30, height: Math.max(2, Math.abs(v) * 30), backgroundColor: v >= 0 ? '#e6ecf2' : '#5f81a3' }} /></Pressable>); })}
               </View>
-              <Text style={[S.mut, { marginTop: 6, textAlign: 'center' }]}>Light bars = White ahead · blue bars = Black ahead. Engine depth is shallow, so treat grades as guidance.</Text>
+              <Text style={[S.mut, { marginTop: 6, textAlign: 'center' }]}>Light bars = White ahead · blue bars = Black ahead. Graded by Stockfish with a short think per move, so treat grades as guidance.</Text>
             </View>)}
         </ScrollView>
       </SafeAreaView>

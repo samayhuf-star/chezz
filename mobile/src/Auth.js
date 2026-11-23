@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Modal, View, Text, Pressable, TextInput, SafeAreaView, ScrollView, ActivityIndicator, Platform } from 'react-native';
-import { C, S } from './theme';
+import { C, S, scheme } from './theme';
+import { Piece } from './Board';
+import { appleAvailable, appleSignIn, AppleButton } from './appleAuth';
 import { api } from './api';
 import { NAMES } from './levels';
 
@@ -8,18 +10,20 @@ import { NAMES } from './levels';
 export function AuthSheet({ visible, start = 'choose', me, onDone, onClose }) {
   const [mode, setMode] = useState(start), [email, setEmail] = useState(''), [pw, setPw] = useState(''), [err, setErr] = useState(''), [busy, setBusy] = useState(false);
   React.useEffect(() => { if (visible) { setMode(start); setErr(''); setPw(''); } }, [visible, start]);
+  const [apple, setApple] = useState(false);
+  React.useEffect(() => { appleAvailable().then(setApple); }, []);
   const run = async body => { setBusy(true); setErr(''); try { const j = await api('auth', body); await onDone(j); } catch (e) { setErr(e.message); } setBusy(false); };
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}><ScrollView contentContainerStyle={{ padding: 18, paddingTop: Platform.OS === 'android' ? 54 : 24 }} keyboardShouldPersistTaps="handled">
         {mode === 'choose' ? (<>
-          <Text style={S.h2}>Welcome to Chesz</Text>
-          <Text style={[S.mut, { marginVertical: 8 }]}>Play, climb the leaderboards and keep your stats.</Text>
-          <Pressable disabled={busy} style={[S.big, { marginTop: 14, opacity: busy ? .6 : 1 }]} onPress={() => run({ mode: 'guest' })}>{busy ? <ActivityIndicator color="#06261c" /> : <Text style={S.bigT}>Continue as guest</Text>}</Pressable>
-          <Pressable style={S.ghost} onPress={() => setMode('in')}><Text style={S.ghostT}>Sign in with email</Text></Pressable>
-          <Pressable style={S.ghost} onPress={() => setMode('up')}><Text style={S.ghostT}>Create account</Text></Pressable>
-          <Text style={[S.mut, { marginTop: 12 }]}>Guests are saved on this device only. Create an account any time to keep your stats and play anywhere.</Text>
-          {!!err && <Text style={{ color: C.bad, marginTop: 10 }}>{err}</Text>}
+          <View style={{ alignItems: 'center', marginTop: 30, marginBottom: 40 }}><Piece p={2} size={96} /><Text style={{ color: C.tx, fontWeight: '800', fontSize: 30, marginTop: 6 }}>Chesz</Text><Text style={[S.mut, { marginTop: 6, fontSize: 15, textAlign: 'center' }]}>Bots, live games and local leaderboards.</Text></View>
+          <Pressable disabled={busy} style={[S.big, { opacity: busy ? .6 : 1 }]} onPress={() => run({ mode: 'guest' })} accessibilityRole="button">{busy ? <ActivityIndicator color="#06261c" /> : <Text style={S.bigT}>Continue as guest</Text>}</Pressable>
+          {apple && <AppleButton dark={scheme !== 'light'} onPress={async () => { setErr(''); try { const c = await appleSignIn(); if (c) await run({ mode: 'apple', identityToken: c.identityToken, name: c.name, ...(me ? { id: me.id, secret: me.secret } : {}) }); } catch (e) { setErr(e.message || 'Apple sign-in failed'); } }} />}
+          <Pressable style={S.ghost} onPress={() => setMode('in')} accessibilityRole="button"><Text style={S.ghostT}>Sign in with email</Text></Pressable>
+          <Pressable style={S.ghost} onPress={() => setMode('up')} accessibilityRole="button"><Text style={S.ghostT}>Create account</Text></Pressable>
+          <Text style={[S.mut, { marginTop: 14, textAlign: 'center', fontSize: 12 }]}>Guests are saved on this device only. Create an account any time to keep your stats and play anywhere.</Text>
+          {!!err && <Text style={{ color: C.bad, marginTop: 10, textAlign: 'center' }}>{err}</Text>}
         </>) : (<>
           <Text style={S.h2}>{mode === 'up' ? 'Create account' : 'Sign in'}</Text>
           <Text style={S.label}>EMAIL</Text>

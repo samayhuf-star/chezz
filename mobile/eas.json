@@ -10,7 +10,8 @@
       "environment": "development",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://chezz.samayhuf.workers.dev",
-        "EXPO_PUBLIC_PRIVACY_URL": "https://chezz.samayhuf.workers.dev/privacy.html"
+        "EXPO_PUBLIC_PRIVACY_URL": "https://chezz.samayhuf.workers.dev/privacy.html",
+        "EXPO_PUBLIC_ONESIGNAL_APP_ID": "5e30ed43-dcdb-423c-9137-4fa7d2b32310"
       }
     },
     "preview": {
@@ -19,7 +20,8 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://chezz.samayhuf.workers.dev",
         "EXPO_PUBLIC_PRIVACY_URL": "https://chezz.samayhuf.workers.dev/privacy.html",
-        "EXPO_PUBLIC_RC_IOS_KEY": "appl_PAEHdTfjUxMCxRAMFkRrCCwFeWn"
+        "EXPO_PUBLIC_RC_IOS_KEY": "appl_PAEHdTfjUxMCxRAMFkRrCCwFeWn",
+        "EXPO_PUBLIC_ONESIGNAL_APP_ID": "5e30ed43-dcdb-423c-9137-4fa7d2b32310"
       }
     },
     "production": {
@@ -28,7 +30,8 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://chezz.samayhuf.workers.dev",
         "EXPO_PUBLIC_PRIVACY_URL": "https://chezz.samayhuf.workers.dev/privacy.html",
-        "EXPO_PUBLIC_RC_IOS_KEY": "appl_PAEHdTfjUxMCxRAMFkRrCCwFeWn"
+        "EXPO_PUBLIC_RC_IOS_KEY": "appl_PAEHdTfjUxMCxRAMFkRrCCwFeWn",
+        "EXPO_PUBLIC_ONESIGNAL_APP_ID": "5e30ed43-dcdb-423c-9137-4fa7d2b32310"
       }
     },
     "simulator": {
@@ -40,7 +43,8 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://chezz.samayhuf.workers.dev",
         "EXPO_PUBLIC_PRIVACY_URL": "https://chezz.samayhuf.workers.dev/privacy.html",
-        "EXPO_PUBLIC_RC_IOS_KEY": "appl_PAEHdTfjUxMCxRAMFkRrCCwFeWn"
+        "EXPO_PUBLIC_RC_IOS_KEY": "appl_PAEHdTfjUxMCxRAMFkRrCCwFeWn",
+        "EXPO_PUBLIC_ONESIGNAL_APP_ID": "5e30ed43-dcdb-423c-9137-4fa7d2b32310"
       }
     }
   },

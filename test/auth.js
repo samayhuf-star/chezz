@@ -10,7 +10,7 @@ const call=(m,body,q)=>new Promise(r=>{const res={status(c){this.c=c;return this
  l=await call('auth',{mode:'login',email:'a@b.co',password:'longenough1'});ok('login ok',l.c===200&&l.o.id===g.o.id&&l.o.secret&&l.o.secret!==g.o.secret);
  const pr=await call('profile',{id:l.o.id,secret:l.o.secret,name:'Ann',city:'X',state:'Y',country:'Z'});ok('session secret works',pr.c===200&&pr.o.doc.name==='Ann');
  ok('no hashes leaked',!JSON.stringify(l.o).match(/pwHash|pwSalt|secretHash/));
- const n=await call('new',{id:l.o.id,secret:l.o.secret,level:3,human:1,base:9999,inc:9});const E=require('../public/engine.js');
+ const n=await call('new',{id:l.o.id,secret:l.o.secret,level:3,human:1,base:9999,inc:9});
  const st=JSON.parse(Buffer.from(n.o.token.split('.')[0],'base64url').toString());ok('clock forced to 7:00',st.tc[0]===420&&st.tc[1]===0);
  for(let i=0;i<8;i++)await call('auth',{mode:'login',email:'a@b.co',password:'nope-nope'});
  l=await call('auth',{mode:'login',email:'a@b.co',password:'longenough1'});ok('lockout after repeated failures',l.c===429);
