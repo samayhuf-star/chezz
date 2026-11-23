@@ -32,7 +32,7 @@ export default function Profile({ profile, playStreak, pro, lastGame, openReview
         <View style={[S.card, { flex: 1, alignItems: 'center' }]}><Text style={S.mut}>ONLINE RATING</Text><Text style={{ color: C.tx, fontWeight: '800', fontSize: 30 }}>{(d.orating | 0) || 1000}</Text><Text style={[S.mut, { fontSize: 12 }]}>Peak {(d.opeak | 0) || 1000}</Text></View></View>
       <View style={[S.card, { flexDirection: 'row' }]}><Stat v={d.points | 0} l="Points" col={C.gold} /><Stat v={(d.w | 0) + (d.ow | 0)} l="Wins" col={C.ac} /><Stat v={(d.d | 0) + (d.od | 0)} l="Draws" /><Stat v={(d.l | 0) + (d.ol | 0)} l="Losses" col={C.bad} /></View>
       <View style={[S.card, { flexDirection: 'row' }]}><Stat v={playStreak} l="Day streak" /><Stat v={s.bestStreak | 0} l="Best win run" /><Stat v={(d.games | 0) + (d.ogames | 0)} l="Games" /><Stat v={(d.beaten || []).length} l="Bots beaten" /></View>
-      {!pro && <Pressable onPress={openPaywall} style={[S.card, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}><Text style={{ color: C.gold, fontWeight: '800', flex: 1 }}>Get Chezz Pro: all 50 levels, unlimited online games</Text><Text style={{ color: C.mut }}>›</Text></Pressable>}
+      {!pro && <Pressable onPress={openPaywall} style={[S.card, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}><Text style={{ color: C.gold, fontWeight: '800', flex: 1 }}>Get Chesz Pro: all 50 levels, unlimited online games</Text><Text style={{ color: C.mut }}>›</Text></Pressable>}
       {profile && profile.guest && <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16 }}>Guest account</Text><Text style={[S.mut, { marginTop: 4 }]}>Your stats live on this device only. Create an account to keep them and sign in anywhere.</Text>
         <Pressable style={[S.big, { marginTop: 10 }]} onPress={() => openAuth('up')}><Text style={S.bigT}>Create account</Text></Pressable></View>}
       {!profile && <Pressable style={S.big} onPress={() => openAuth('choose')}><Text style={S.bigT}>Sign in or play as guest</Text></Pressable>}
@@ -87,8 +87,8 @@ export function Settings({ visible, onClose, settings, applySettings, profile, m
           <Pressable style={[S.big, { marginTop: 8 }]} onPress={saveP}><Text style={S.bigT}>Save</Text></Pressable>{!!msg && <Text style={[S.mut, { textAlign: 'center', marginTop: 8 }]}>{msg}</Text>}</View>
         <Text style={S.label}>ACCOUNT</Text>
         <View style={S.card}>
-          <Line t="Chezz Pro" v={pro ? 'Active' : 'Not active'} on={pro} onPress={pro ? undefined : openPaywall} />
-          <Line t="Restore Purchases" onPress={() => restore().then(r => alert(r.ok ? 'Restored' : 'Nothing to restore', r.ok ? 'Chezz Pro is active.' : r.error || 'No purchases were found for this account.'))} />
+          <Line t="Chesz Pro" v={pro ? 'Active' : 'Not active'} on={pro} onPress={pro ? undefined : openPaywall} />
+          <Line t="Restore Purchases" onPress={() => restore().then(r => alert(r.ok ? 'Restored' : 'Nothing to restore', r.ok ? 'Chesz Pro is active.' : r.error || 'No purchases were found for this account.'))} />
           {Platform.OS !== 'web' && <Line t="Manage subscription" onPress={() => Linking.openURL(Platform.OS === 'ios' ? 'https://apps.apple.com/account/subscriptions' : 'https://play.google.com/store/account/subscriptions')} />}
           {!!profile && !!profile.email && <Line t="Signed in as" v={profile.email} />}
           {!!profile && profile.apple && <Line t="Signed in with" v="Apple" />}
@@ -101,7 +101,7 @@ export function Settings({ visible, onClose, settings, applySettings, profile, m
           <Line t="Licences & source code" onPress={() => { onClose(); openLicences(); }} />
           <Line t="Privacy Policy" onPress={() => Linking.openURL(PRIVACY_URL)} /><Line t="Terms of Use (EULA)" onPress={() => Linking.openURL(TERMS_URL)} /><Line t="Support" onPress={() => Linking.openURL(SUPPORT_URL)} />
         </View>
-        <Text style={[S.mut, { textAlign: 'center', fontSize: 11 }]}>Chezz is free software (GPLv3). Engine: Stockfish. Chess pieces: Chessnut by Alexis Luengas.</Text>
+        <Text style={[S.mut, { textAlign: 'center', fontSize: 11 }]}>Chesz is free software (GPLv3). Engine: Stockfish. Chess pieces: Chessnut by Alexis Luengas.</Text>
       </ScrollView></SafeAreaView>
     </Modal>);
 }

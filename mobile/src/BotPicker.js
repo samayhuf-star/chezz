@@ -32,7 +32,7 @@ export default function BotPicker({ visible, pref, profile, pro, onClose, onStar
         <Text style={S.label}>PLAY AS</Text>
         <View style={{ flexDirection: 'row', marginBottom: 12 }}>{[['w', 'White'], ['b', 'Black'], ['r', 'Random']].map(([k, l]) => <Pill key={k} t={l} on={p.color === k} onPress={() => setP({ ...p, color: k })} />)}</View>
         <View style={[S.card, { flexDirection: 'row', justifyContent: 'space-between' }]}><Text style={{ color: C.tx, fontWeight: '700' }}>Clock</Text><Text style={S.mut}>7 minutes each</Text></View>
-        <Pressable disabled={go} style={[S.big, { opacity: go ? .6 : 1 }]} onPress={async () => { setGo(true); await onStart(p); setGo(false); }} accessibilityRole="button"><Text style={S.bigT}>{locked(lv) ? 'Unlock ' + NAMES[lv - 1] + ' with Chezz Pro' : profile ? 'Start ranked game' : 'Start casual game'}</Text></Pressable>
+        <Pressable disabled={go} style={[S.big, { opacity: go ? .6 : 1 }]} onPress={async () => { setGo(true); await onStart(p); setGo(false); }} accessibilityRole="button"><Text style={S.bigT}>{locked(lv) ? 'Unlock ' + NAMES[lv - 1] + ' with Chesz Pro' : profile ? 'Start ranked game' : 'Start casual game'}</Text></Pressable>
         <Text style={[S.mut, { textAlign: 'center', marginTop: 10 }]}>{profile ? 'Ranked: the server re-checks the game, then it counts for the leaderboard and your stats.' : 'You are not signed in, so this game will not be ranked.'}</Text>
       </ScrollView></SafeAreaView>
     </Modal>);

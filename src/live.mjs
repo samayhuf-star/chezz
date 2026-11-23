@@ -85,6 +85,7 @@ export class GameRoom {
       const r = g.over.r === 'd' ? 'd' : g.over.r === side ? 'w' : 'l', opp = g.players[side === 'w' ? 'b' : 'w'];
       d.orating = g.result[side].rating; d.opeak = Math.max(d.opeak | 0, d.orating); d.ogames = (d.ogames | 0) + 1;
       d['o' + r] = (d['o' + r] | 0) + 1;
+      if (r !== 'l') lib.addSeason(d, r === 'w' ? 30 : 10); // City vs City: a live win adds 30 to your city, a draw 10
       d.orecent = [{ opp: opp.name, or: opp.rating, r, why: g.over.why, dr: g.result[side].d, c: side, p: g.moves.length, ts: Date.now() }].concat(d.orecent || []).slice(0, 20);
       d.updated = Date.now(); await lib.savePlayer(d);
     }

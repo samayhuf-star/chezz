@@ -47,7 +47,7 @@ export default function Online({ me, profile, saveDoc, pro, openPaywall, openAut
   const find = async () => {
     if (!me.current) return openAuth('choose');
     const day = dayNum(), used = (await load('online.day')) || { day, n: 0 }, n = used.day === day ? used.n : 0;
-    if (!pro && n >= FREE_ONLINE_PER_DAY) return openPaywall('Free players get ' + FREE_ONLINE_PER_DAY + ' online games a day. Chezz Pro makes them unlimited.');
+    if (!pro && n >= FREE_ONLINE_PER_DAY) return openPaywall('Free players get ' + FREE_ONLINE_PER_DAY + ' online games a day. Chesz Pro makes them unlimited.');
     if (sock.current) sock.current.close();
     gameId.current = null; stRef.current = null; setSt(null); setNote(''); setSince(Date.now()); setNow(Date.now()); setEndOpen(false); go('queue');
     sock.current = openSocket('/api/live/queue', auth(), m => {
@@ -103,7 +103,7 @@ export default function Online({ me, profile, saveDoc, pro, openPaywall, openAut
     setSel(mine ? s : null);
   };
   const resign = () => { if (!live) return; if (!armed) { setArmed(true); setTimeout(() => setArmed(false), 3000); return; } setArmed(false); tell({ t: 'resign' }); };
-  const pgn = () => { const res = !st.over ? '*' : st.over.r === 'd' ? '1/2-1/2' : st.over.r === 'w' ? '1-0' : '0-1'; let h = '[Event "Chezz online"]\n[White "' + st.w.name + '"]\n[Black "' + st.b.name + '"]\n[Result "' + res + '"]\n\n'; sans.forEach((s, i) => { if (i % 2 === 0) h += (i / 2 + 1) + '. '; h += s + ' '; }); return h + res; };
+  const pgn = () => { const res = !st.over ? '*' : st.over.r === 'd' ? '1/2-1/2' : st.over.r === 'w' ? '1-0' : '0-1'; let h = '[Event "Chesz online"]\n[White "' + st.w.name + '"]\n[Black "' + st.b.name + '"]\n[Result "' + res + '"]\n\n'; sans.forEach((s, i) => { if (i % 2 === 0) h += (i / 2 + 1) + '. '; h += s + ' '; }); return h + res; };
 
   /* ---------- lobby ---------- */
   if (phase === 'lobby') {

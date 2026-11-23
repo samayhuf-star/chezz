@@ -1,4 +1,4 @@
-// Licences & source: Chezz ships Stockfish, so the app is GPLv3 and must point to its own source code.
+// Licences & source: Chesz ships Stockfish, so the app is GPLv3 and must point to its own source code.
 import React from 'react';
 import { Modal, View, Text, Pressable, ScrollView, SafeAreaView, Linking, Platform } from 'react-native';
 import { C, S } from './theme';
@@ -16,8 +16,8 @@ export default function Licences({ visible, onClose }) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}><ScrollView contentContainerStyle={{ padding: 16, paddingTop: Platform.OS === 'android' ? 44 : 16 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}><Text style={S.h2}>Licences & source</Text><Pressable onPress={onClose}><Text style={{ color: C.ac, fontWeight: '800', fontSize: 16 }}>Done</Text></Pressable></View>
-        <View style={[S.card, { borderWidth: 1, borderColor: C.ac }]}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16 }}>Chezz is free software</Text>
-          <Text style={[S.mut, { marginTop: 6, lineHeight: 19 }]}>Chezz is licensed under the GNU General Public License v3. You may use, study, share and change it under the terms of that licence. It comes with no warranty.</Text>
+        <View style={[S.card, { borderWidth: 1, borderColor: C.ac }]}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16 }}>Chesz is free software</Text>
+          <Text style={[S.mut, { marginTop: 6, lineHeight: 19 }]}>Chesz is licensed under the GNU General Public License v3. You may use, study, share and change it under the terms of that licence. It comes with no warranty.</Text>
           <Pressable style={[S.big, { marginTop: 12, paddingVertical: 11 }]} onPress={() => Linking.openURL(SOURCE_URL)}><Text style={S.bigT}>View source on GitHub</Text></Pressable>
           <Pressable style={S.ghost} onPress={() => Linking.openURL(GPL_URL)}><Text style={S.ghostT}>Read the GPLv3 licence</Text></Pressable></View>
         <Text style={S.label}>OPEN-SOURCE COMPONENTS</Text>

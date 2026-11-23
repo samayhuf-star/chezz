@@ -24,6 +24,8 @@ import Profile, { Settings } from './src/Profile';
 import Online from './src/Online';
 import Onboarding from './src/Onboarding';
 import Licences from './src/Licences';
+import Rankings from './src/Rankings';
+import { initPush, pushLogin, pushLogout, pushTags, askPushOnce } from './src/push';
 import { Piece } from './src/Board';
 
 const hap = { on: true }; // haptics switch (Profile > Settings)
@@ -37,7 +39,7 @@ const kingSq = chess => { if (!chess.isCheck()) return null; const t = chess.tur
 export default function App() {
   const bot = useRef(null), game = useRef(null), me = useRef(null), meCache = useRef(null);
   const [, force] = useState(0), rerender = useCallback(() => force(x => x + 1), []);
-  const [tab, setTab] = useState('home'), [onb, setOnb] = useState(false), [lic, setLic] = useState(false), [set, setSet] = useState(false);
+  const [tab, setTab] = useState('home'), [onb, setOnb] = useState(false), [lic, setLic] = useState(false), [set, setSet] = useState(false), [rankStart, setRankStart] = useState('bots');
   const [sel, setSel] = useState(null), [flip, setFlip] = useState(false), [hint, setHint] = useState(null);
   const [modal, setModal] = useState(null); // 'new' | 'end' | {promo:[...]}
   const [paywall, setPaywall] = useState(null), [thinking, setThinking] = useState(false), [endNote, setEndNote] = useState('');
@@ -45,11 +47,12 @@ export default function App() {
   const [resume, setResume] = useState(null), [armed, setArmed] = useState(false), [rv, setRv] = useState(null), [auth, setAuth] = useState(null);
   const [settings, setSettings] = useState({ sound: true, haptics: true, theme: 'classic', scheme: 'dark' }), [review, setReview] = useState(null), [playStreak, setPlayStreak] = useState(0), [lastGame, setLastGame] = useState(null);
   const billing = usePro();
+  useEffect(() => { if (profile && profile.id) { pushLogin(profile.id); pushTags({ city: profile.city || '', country: profile.country || '' }); } else pushLogout(); }, [profile && profile.id, profile && profile.city, profile && profile.country]);
   const applySettings = async n => { setScheme(n.scheme); setSettings(n); hap.on = n.haptics; setSoundEnabled(n.sound); await save('settings', n); };
 
   /* ---------- boot ---------- */
   useEffect(() => { (async () => {
-    initSound();
+    initSound(); initPush();
     const st = await load('settings'); if (st) { setScheme(st.scheme); setSettings(s => ({ ...s, ...st })); hap.on = st.haptics !== false; setSoundEnabled(st.sound !== false); }
     setPlayStreak((await readStreak('play')).count); { const lg = await load('lastGame'); if (lg && lg.moves && typeof lg.moves[0] === 'string') setLastGame(lg); }
     const p = await load('pref'); if (p) setPref(p);
@@ -114,7 +117,7 @@ export default function App() {
   const finish = (g, r, why, end) => {
     if (g.over) return; g.over = { r, why, end }; g.running = false; save('game', null);
     play(r === 'w' ? 'win' : r === 'l' ? 'lose' : 'draw');
-    if (g.moves.length >= 4) { const lg = { moves: g.moves.slice(), human: g.human, level: g.level }; setLastGame(lg); save('lastGame', lg); bumpStreak('play').then(s => setPlayStreak(s.count)); }
+    if (g.moves.length >= 4) { const lg = { moves: g.moves.slice(), human: g.human, level: g.level }; setLastGame(lg); save('lastGame', lg); bumpStreak('play').then(s => setPlayStreak(s.count)); askPushOnce(); }
     hap.on && Haptics.notificationAsync(r === 'w' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning).catch(() => {});
     let claim = null;
     if (g.ranked && g.token && me.current && g.moves.length >= 1 && end !== 'abort') {
@@ -172,7 +175,7 @@ export default function App() {
   };
   const hintNow = () => {
     const gm = game.current; if (!gm || gm.over || gm.busy || !myTurn(gm)) return;
-    if (!billing.pro) return setPaywall('Hints are part of Chezz Pro.');
+    if (!billing.pro) return setPaywall('Hints are part of Chesz Pro.');
     const go = async () => { gm.token = null; gm.ranked = false; rerender(); const a = await bot.current.analyse({ moves: gm.moves.slice(), nodes: 150000, mpv: 1 }); if (!a.best) return; setHint([a.best.slice(0, 2), a.best.slice(2, 4)]); setTimeout(() => setHint(null), 3500); };
     if (gm.ranked) alert('Use a hint?', 'Hints make this game casual: no points or leaderboard result.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Show hint', onPress: go }]); else go();
   };
@@ -185,11 +188,11 @@ export default function App() {
     if (yes) finish(gm, 'd', 'Draw agreed', 'draw'); else { alert('Draw offer', NAMES[gm.level - 1] + ' declines the draw.'); persist(); }
   };
   const newGameBtn = () => { const gm = game.current; if (gm && !gm.over && gm.moves.length >= 2) alert('Leave this game?', 'Starting a new game counts as abandoning this one (no points, no result).', [{ text: 'Keep playing', style: 'cancel' }, { text: 'Leave game', style: 'destructive', onPress: () => { gm.over = { r: 'd', why: 'Abandoned', end: 'abort' }; save('game', null); setModal('new'); } }]); else setModal('new'); };
-  const pgn = () => { const gm = game.current, res = gm.over ? (gm.over.r === 'd' ? '1/2-1/2' : ((gm.over.r === 'w') === (gm.human === 1) ? (gm.human === 1 ? '1-0' : '0-1') : (gm.human === 1 ? '0-1' : '1-0'))) : '*'; let h = '[Event "Chezz vs ' + NAMES[gm.level - 1] + ' (Level ' + gm.level + ')"]\n[Result "' + res + '"]\n\n'; gm.sans.forEach((s, i) => { if (i % 2 === 0) h += (i / 2 + 1) + '. '; h += s + ' '; }); return h + res; };
+  const pgn = () => { const gm = game.current, res = gm.over ? (gm.over.r === 'd' ? '1/2-1/2' : ((gm.over.r === 'w') === (gm.human === 1) ? (gm.human === 1 ? '1-0' : '0-1') : (gm.human === 1 ? '0-1' : '1-0'))) : '*'; let h = '[Event "Chesz vs ' + NAMES[gm.level - 1] + ' (Level ' + gm.level + ')"]\n[Result "' + res + '"]\n\n'; gm.sans.forEach((s, i) => { if (i % 2 === 0) h += (i / 2 + 1) + '. '; h += s + ' '; }); return h + res; };
 
   /* ---------- starting a new game (with the paywall gate) ---------- */
   const begin = async p => {
-    if (p.level > FREE_LEVELS && !billing.pro) return setPaywall('Levels ' + (FREE_LEVELS + 1) + '–50 are part of Chezz Pro.');
+    if (p.level > FREE_LEVELS && !billing.pro) return setPaywall('Levels ' + (FREE_LEVELS + 1) + '–50 are part of Chesz Pro.');
     setPref(p); save('pref', p);
     const human = p.color === 'w' ? 1 : p.color === 'b' ? -1 : Math.random() < .5 ? 1 : -1, tc = TCS[0];
     const o = { level: p.level, human, tc: { b: tc.b, i: tc.i }, g: rid(), token: null };
@@ -216,7 +219,7 @@ export default function App() {
       <StatusBar barStyle={settings.scheme === 'light' ? 'dark-content' : 'light-content'} />
       <BotWorker ref={bot} />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingTop: Platform.OS === 'android' ? 34 : 6, paddingBottom: 6 }}>
-        {tab === 'play' ? <Pressable onPress={() => setTab('home')} accessibilityRole="button" accessibilityLabel="Back to Home"><Text style={{ color: C.ac, fontWeight: '800', fontSize: 17 }}>‹ Home</Text></Pressable> : <Text style={{ color: C.tx, fontWeight: '800', fontSize: 19 }}>Chezz</Text>}
+        {tab === 'play' ? <Pressable onPress={() => setTab('home')} accessibilityRole="button" accessibilityLabel="Back to Home"><Text style={{ color: C.ac, fontWeight: '800', fontSize: 17 }}>‹ Home</Text></Pressable> : <Text style={{ color: C.tx, fontWeight: '800', fontSize: 19 }}>Chesz</Text>}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {!!profile && !!profile.rating && <Text style={{ color: C.mut, fontWeight: '700', fontSize: 13 }}>★ {profile.rating}</Text>}
           <Text style={{ color: playStreak ? C.gold : C.mut, fontWeight: '800', fontSize: 14 }} accessibilityLabel={playStreak + ' day play streak'}>🔥 {playStreak}</Text>
@@ -240,14 +243,14 @@ export default function App() {
           </View>
           <View style={[S.card, { margin: 10, maxHeight: 74 }]}><ScrollView><Text style={{ color: C.mut, fontSize: 13, lineHeight: 20 }}>{g && g.sans.length ? g.sans.map((s, i) => (i % 2 === 0 ? (i / 2 + 1) + '. ' : '') + s + ' ').join('') : 'Moves will appear here.'}</Text></ScrollView></View>
           <Text style={[S.mut, { textAlign: 'center', marginHorizontal: 18 }]}>Win = Level × 10 points · Draw = Level × 4. Ranked results are verified by the server. Undo and Hint make a game casual.</Text>
-          {!billing.pro && <Pressable onPress={() => setPaywall('')} style={{ margin: 14, overflow: 'hidden', padding: 12, borderRadius: 14, backgroundColor: C.card, alignItems: 'center' }}><Image source={require('./assets/art/paywall.jpg')} style={{ width: '100%', height: 120, borderRadius: 10, marginBottom: 8 }} resizeMode="cover" /><Text style={{ color: C.gold, fontWeight: '800' }}>👑 Unlock Levels 11–50 with Chezz Pro</Text></Pressable>}
+          {!billing.pro && <Pressable onPress={() => setPaywall('')} style={{ margin: 14, overflow: 'hidden', padding: 12, borderRadius: 14, backgroundColor: C.card, alignItems: 'center' }}><Image source={require('./assets/art/paywall.jpg')} style={{ width: '100%', height: 120, borderRadius: 10, marginBottom: 8 }} resizeMode="cover" /><Text style={{ color: C.gold, fontWeight: '800' }}>👑 Unlock Levels 11–50 with Chesz Pro</Text></Pressable>}
         </ScrollView>)}
 
       {tab === 'home' && <Home profile={profile} playStreak={playStreak} resume={resume} onResume={() => restore(resume)} onDiscard={() => { save('game', null); setResume(null); }}
-        live={g && !g.over ? { level: g.level, open: () => setTab('play') } : null} onBot={() => { if (g && !g.over && g.moves.length >= 2) setTab('play'); else { setTab('play'); setModal('new'); } }} onOnline={() => setTab('online')} onPuzzles={() => setTab('puzzles')} />}
+        live={g && !g.over ? { level: g.level, open: () => setTab('play') } : null} onBot={() => { if (g && !g.over && g.moves.length >= 2) setTab('play'); else { setTab('play'); setModal('new'); } }} onOnline={() => setTab('online')} onPuzzles={() => setTab('puzzles')} onCities={() => { setRankStart('cities'); setTab('rank'); }} />}
       {tab === 'online' && <Online me={me} profile={profile} saveDoc={saveDoc} pro={billing.pro} openPaywall={setPaywall} openAuth={setAuth} themeId={settings.theme} engine={bot} haptics={settings.haptics} />}
       {tab === 'puzzles' && <Puzzles themeId={settings.theme} pro={billing.pro} openPaywall={setPaywall} />}
-      {tab === 'rank' && <Rankings profile={profile} />}
+      {tab === 'rank' && <Rankings key={rankStart} profile={profile} start={rankStart} />}
       {tab === 'me' && <Profile profile={profile} playStreak={playStreak} pro={billing.pro} lastGame={lastGame} openReview={setReview} openAuth={setAuth} openPaywall={() => setPaywall('')} openSettings={() => setSet(true)} />}
 
       <AuthSheet visible={!!auth} start={auth === 'up' ? 'up' : auth === 'in' ? 'in' : 'choose'} me={me.current} onDone={onAuthed} onClose={() => setAuth(null)} />
@@ -316,30 +319,3 @@ function Btn({ t, onPress, off, pri, danger }) {
   return <Pressable disabled={off} onPress={onPress} style={[S.btn, { opacity: off ? .35 : 1, backgroundColor: danger ? C.bad : pri ? C.ac : C.card2, paddingHorizontal: 2 }]}><Text style={[S.btnT, { fontSize: 11.5, color: pri ? '#06261c' : C.tx }]} numberOfLines={1} adjustsFontSizeToFit>{t}</Text></Pressable>;
 }
 
-function Rankings({ profile }) {
-  const [mode, setMode] = useState('bots'); // bots: points from bot games; online: live-game rating
-  const [scope, setScope] = useState('world'), [rows, setRows] = useState(null), [note, setNote] = useState('');
-  useEffect(() => { (async () => {
-    setRows(null); setNote('');
-    const d = profile || {};
-    if ((scope === 'city' && !d.city) || (scope === 'state' && !d.state) || (scope !== 'world' && !d.country)) { setRows([]); return setNote('Add your place in the Profile tab to see this board.'); }
-    try {
-      const q = 'scope=' + scope + '&city=' + encodeURIComponent(d.city || '') + '&state=' + encodeURIComponent(d.state || '') + '&country=' + encodeURIComponent(d.country || '') + (d.id ? '&id=' + d.id : '') + (mode === 'online' ? '&sort=online' : '');
-      const j = await api('leaderboard?' + q, null, 'GET'); setRows(Array.isArray(j && j.rows) ? j.rows : []); setNote(j && j.rank ? 'Your rank: #' + j.rank + ' of ' + j.total : ((j && j.total) | 0) + ' players');
-    } catch (e) { setRows([]); setNote(e.message); }
-  })(); }, [scope, mode, profile && profile.id]);
-  return (
-    <ScrollView contentContainerStyle={{ padding: 12 }}>
-      <View style={{ flexDirection: 'row', backgroundColor: C.card, borderRadius: 12, padding: 4, marginBottom: 10 }}>{[['bots', 'Bot points'], ['online', 'Online rating']].map(([k, l]) => <Pressable key={k} onPress={() => setMode(k)} accessibilityRole="button" style={{ flex: 1, paddingVertical: 9, borderRadius: 9, backgroundColor: mode === k ? C.ac : 'transparent' }}><Text style={{ textAlign: 'center', fontWeight: '800', color: mode === k ? '#06261c' : C.mut }}>{l}</Text></Pressable>)}</View>
-      <Image source={require('./assets/art/trophy.jpg')} style={{ width: '100%', height: 150, borderRadius: 16, marginBottom: 10 }} resizeMode="cover" accessibilityLabel="Leaderboard trophy" />
-      <View style={{ flexDirection: 'row', gap: 6, marginBottom: 10 }}>{[['city', 'My City'], ['state', 'My State'], ['country', 'Country'], ['world', 'Worldwide']].map(([k, l]) => <Pressable key={k} onPress={() => setScope(k)} style={[S.btn, { backgroundColor: scope === k ? C.ac : C.card }]}><Text style={[S.btnT, { color: scope === k ? '#06261c' : C.mut }]}>{l}</Text></Pressable>)}</View>
-      {rows === null ? <ActivityIndicator color={C.ac} /> : rows.map((r, i) => (
-        <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.card, borderRadius: 12, padding: 10, marginBottom: 6, borderWidth: profile && profile.id === r.id ? 2 : 0, borderColor: C.ac }}>
-          <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: i === 0 ? C.gold : i === 1 ? '#c3cad4' : i === 2 ? '#d08b52' : C.card2, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontWeight: '800', color: i < 3 ? '#222' : C.tx }}>{i + 1}</Text></View>
-          <View style={{ flex: 1, marginHorizontal: 10 }}><Text style={{ color: C.tx, fontWeight: '700' }} numberOfLines={1}>{r.name}</Text><Text style={S.mut} numberOfLines={1}>{[r.city, r.state, r.country].filter(Boolean).join(', ')} {mode === 'online' ? '' : ' · best Lv ' + (r.best || 0)}</Text></View>
-          <View><Text style={{ color: C.ac, fontWeight: '800', fontSize: 17, textAlign: 'right' }}>{mode === 'online' ? r.orating : r.points}</Text><Text style={S.mut}>{mode === 'online' ? r.ow + 'W ' + r.od + 'D ' + r.ol + 'L' : r.w + 'W ' + r.d + 'D ' + r.l + 'L'}</Text></View>
-        </View>))}
-      {rows !== null && !rows.length && !note.startsWith('Add') && mode === 'online' && <Text style={[S.mut, { textAlign: 'center', marginTop: 10 }]}>No online games here yet. Play one to get on this board.</Text>}
-      <Text style={[S.mut, { textAlign: 'center', marginTop: 10 }]}>{note}</Text>
-    </ScrollView>);
-}

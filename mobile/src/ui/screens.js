@@ -1,4 +1,4 @@
-// Checkpoint 2 UI skeleton: every screen of the rebuilt Chezz, drawn with dummy data.
+// Checkpoint 2 UI skeleton: every screen of the rebuilt Chesz, drawn with dummy data.
 // No engine, network or purchases here; later checkpoints wire these to chess.js, Stockfish and the live-game server.
 import React from 'react';
 import { View, Text, Image, ScrollView } from 'react-native';
@@ -69,7 +69,7 @@ export const WhatYouGet = () => (
 export const Paywall = () => (
   <Screen pad={20}>
     <Image source={require('../../assets/art/paywall.jpg')} style={{ width: '100%', height: 170, borderRadius: 20 }} resizeMode="cover" />
-    <Text style={{ color: C.tx, fontWeight: '800', fontSize: 26, marginTop: 16 }}>Unlock Chezz Pro</Text>
+    <Text style={{ color: C.tx, fontWeight: '800', fontSize: 26, marginTop: 16 }}>Unlock Chesz Pro</Text>
     <Text style={[S.mut, { marginTop: 4, marginBottom: 14, fontSize: 14 }]}>All 50 levels, unlimited online games, full review.</Text>
     {[['Weekly', '$1.99 / week', '7 days free, then billed weekly', true], ['Yearly', '$24.99 / year', 'About $0.48 a week', false]].map(([n, p, d, on]) => (
       <Row key={n} style={[S.card, { borderWidth: 2, borderColor: on ? C.ac : C.card, justifyContent: 'space-between' }]}>
@@ -83,7 +83,7 @@ export const Paywall = () => (
 
 export const SignIn = () => (
   <Screen scroll={false} pad={22}>
-    <View style={{ alignItems: 'center', marginTop: 40 }}><Piece p={2} size={96} /><Text style={{ color: C.tx, fontWeight: '800', fontSize: 30, marginTop: 6 }}>Chezz</Text><Text style={[S.mut, { marginTop: 6, fontSize: 15 }]}>Bots, live games and local leaderboards.</Text></View>
+    <View style={{ alignItems: 'center', marginTop: 40 }}><Piece p={2} size={96} /><Text style={{ color: C.tx, fontWeight: '800', fontSize: 30, marginTop: 6 }}>Chesz</Text><Text style={[S.mut, { marginTop: 6, fontSize: 15 }]}>Bots, live games and local leaderboards.</Text></View>
     <View style={{ flex: 1 }} />
     <Big t="Play as guest" /><Big ghost t="Sign in with Apple" /><Big ghost t="Continue with email" />
     <Text style={[S.mut, { textAlign: 'center', marginVertical: 16, fontSize: 11 }]}>No account needed to play bots. Online games and leaderboards use a free account.</Text>
@@ -97,7 +97,7 @@ const ModeCard = ({ p, t, d, tag, col }) => (
       <Text style={[S.mut, { marginTop: 3 }]}>{d}</Text></View><Text style={{ color: C.mut, fontSize: 22 }}>›</Text></Row>);
 export const Home = () => (
   <View style={{ flex: 1 }}><Screen>
-    <Head title="Chezz" right={<Row><Pill t="Bots 1240" /><Pill t="Online 1085" /><Pill t="Streak 6" gold /></Row>} />
+    <Head title="Chesz" right={<Row><Pill t="Bots 1240" /><Pill t="Online 1085" /><Pill t="Streak 6" gold /></Row>} />
     <View style={[S.card, { backgroundColor: '#233a34', borderWidth: 1, borderColor: C.ac }]}><Text style={{ color: C.tx, fontWeight: '700' }}>Unfinished game vs Maple (Level 11)</Text>
       <Row style={{ gap: 8, marginTop: 10 }}><Big t="Resume" style={{ flex: 1, paddingVertical: 10 }} /><Big ghost t="Discard" style={{ flex: 1, marginTop: 0, paddingVertical: 10 }} /></Row></View>
     <ModeCard p={2} t="Play a bot" d="50 levels on Stockfish. You are on Level 11." col={C.ac} />
@@ -232,15 +232,15 @@ export const Settings = () => (
   <Screen>
     <Head title="Settings" />
     <Text style={S.label}>GAME</Text><View style={S.card}><Line t="Sound" v="On" /><Line t="Haptics" v="On" /><Line t="Board theme" v="Classic" /><Line t="Appearance" v="Dark" /></View>
-    <Text style={S.label}>ACCOUNT</Text><View style={S.card}><Line t="Chezz Pro" v="Active" /><Line t="Restore Purchases" /><Line t="Manage subscription" /><Line t="Sign out" /><Line t="Delete account" danger /></View>
+    <Text style={S.label}>ACCOUNT</Text><View style={S.card}><Line t="Chesz Pro" v="Active" /><Line t="Restore Purchases" /><Line t="Manage subscription" /><Line t="Sign out" /><Line t="Delete account" danger /></View>
     <Text style={S.label}>ABOUT</Text><View style={S.card}><Line t="Licences & source code" /><Line t="Privacy Policy" /><Line t="Terms of Use" /><Line t="Support" /></View>
   </Screen>);
 
 export const Licences = () => (
   <Screen>
     <Head title="Licences & source" />
-    <View style={[S.card, { borderWidth: 1, borderColor: C.ac }]}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16 }}>Chezz is free software</Text>
-      <Text style={[S.mut, { marginTop: 6, lineHeight: 19 }]}>Chezz is licensed under the GNU General Public License v3. You may use, study, share and change it under the terms of that licence.</Text>
+    <View style={[S.card, { borderWidth: 1, borderColor: C.ac }]}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16 }}>Chesz is free software</Text>
+      <Text style={[S.mut, { marginTop: 6, lineHeight: 19 }]}>Chesz is licensed under the GNU General Public License v3. You may use, study, share and change it under the terms of that licence.</Text>
       <Big t="View source on GitHub" style={{ marginTop: 12, paddingVertical: 11 }} /><Big ghost t="Read the GPLv3 licence" /></View>
     <Text style={S.label}>OPEN-SOURCE COMPONENTS</Text>
     {[['Stockfish', 'Chess engine behind every bot, hints and review', 'GPL-3.0'], ['chess.js', 'Move rules, check, mate and draw detection', 'BSD-2-Clause'], ['Chessnut pieces', 'Piece artwork by Alexis Luengas', 'Apache-2.0'], ['Expo & React Native', 'App framework', 'MIT']].map(([n, d, l]) => (

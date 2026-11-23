@@ -94,7 +94,7 @@ The paywall reads the current RevenueCat offering. Create these auto-renewable p
 
 | Store | Product ID | Period | Intended US price |
 |---|---|---|---|
-| App Store Connect, subscription group Chezz Pro | `chezz_pro_monthly` | 1 month | $3.99 |
-| App Store Connect, subscription group Chezz Pro | `chezz_pro_yearly` | 1 year | $24.99 |
+| App Store Connect, subscription group Chesz Pro | `chezz_pro_monthly` | 1 month | $5.99 |
+| App Store Connect, subscription group Chesz Pro | `chezz_pro_yearly` | 1 year | $29.99 |
 | Play Console | `chezz_pro_monthly` | monthly base plan | $3.99 |
 | Play Console | `chezz_pro_yearly` | yearly base plan | $24.99 |

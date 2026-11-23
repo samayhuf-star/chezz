@@ -14,7 +14,7 @@ module.exports = L.handler('POST', async (req, res, b) => {
   if (v.result !== 'l' && elapsed < v.humanMoves * (process.env.MIN_MS_PER_MOVE !== undefined ? +process.env.MIN_MS_PER_MOVE : 600)) return res.status(400).json({ error: 'Game was too fast to be valid' });
   const long = v.plies >= 4;
   const pts = long ? (v.result === 'w' ? st.l * 10 : v.result === 'd' ? st.l * 4 : 0) : 0;
-  doc.points = (doc.points | 0) + pts; doc.games = (doc.games | 0) + 1;
+  doc.points = (doc.points | 0) + pts; if (pts) L.addSeason(doc, pts); doc.games = (doc.games | 0) + 1;
   // Elo-style rating against the bot's rating (level 1 = 450 ... level 50 = 2900). Only games of 4+ plies count.
   let dr = 0;
   if (long) {

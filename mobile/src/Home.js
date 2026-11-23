@@ -5,6 +5,7 @@ import { Piece } from './Board';
 import { api, apiEnabled } from './api';
 import { C, S } from './theme';
 import { NAMES } from './levels';
+import { placeQuery, seasonName } from './Rankings';
 
 const Chip = ({ t, gold }) => <Text style={{ color: gold ? C.gold : C.mut, backgroundColor: C.card2, fontWeight: '800', fontSize: 12, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, overflow: 'hidden', marginLeft: 6 }}>{t}</Text>;
 const Mode = ({ p, t, d, tag, col, onPress }) => (
@@ -13,13 +14,17 @@ const Mode = ({ p, t, d, tag, col, onPress }) => (
     <View style={{ marginLeft: 14, flex: 1 }}><View style={{ flexDirection: 'row', alignItems: 'center' }}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 18 }}>{t}</Text>{!!tag && <Text style={{ marginLeft: 8, color: '#06261c', backgroundColor: col, fontSize: 10, fontWeight: '800', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, overflow: 'hidden' }}>{tag}</Text>}</View>
       <Text style={[S.mut, { marginTop: 3 }]}>{d}</Text></View><Text style={{ color: C.mut, fontSize: 22 }}>›</Text></Pressable>);
 
-export default function Home({ profile, playStreak, resume, onResume, onDiscard, live, onBot, onOnline, onPuzzles }) {
-  const [board, setBoard] = useState(null);
+export default function Home({ profile, playStreak, resume, onResume, onDiscard, live, onBot, onOnline, onPuzzles, onCities }) {
+  const [board, setBoard] = useState(null), [season, setSeason] = useState(null);
   const d = profile || {}, scope = d.city && d.country ? 'city' : 'world', next = Math.min(50, (d.best | 0) + 1);
   useEffect(() => { let dead = false; (async () => {
     if (!apiEnabled()) return;
     try { const j = await api('leaderboard?scope=' + scope + '&city=' + encodeURIComponent(d.city || '') + '&state=' + encodeURIComponent(d.state || '') + '&country=' + encodeURIComponent(d.country || '') + (d.id ? '&id=' + d.id : ''), null, 'GET'); if (!dead) setBoard(j); } catch (e) {}
   })(); return () => { dead = true; }; }, [scope, d.id, d.points, d.city, d.state, d.country]);
+  useEffect(() => { let dead = false; (async () => {
+    if (!apiEnabled()) return;
+    try { const j = await api('cities?' + placeQuery(d), null, 'GET'); if (!dead) setSeason(j); } catch (e) {}
+  })(); return () => { dead = true; }; }, [d.id, d.points, d.city, d.state, d.country]);
   const rows = board && Array.isArray(board.rows) ? board.rows.slice(0, 3) : [], mine = board && board.rank > 3 ? board.rank : 0;
   return (
     <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: 30 }}>
@@ -31,6 +36,11 @@ export default function Home({ profile, playStreak, resume, onResume, onDiscard,
       <Mode p={2} t="Play a bot" d={'50 levels on Stockfish. ' + (d.best ? 'Next up: Level ' + next + ', ' + NAMES[next - 1] + '.' : 'Start with Level 1.')} col={C.ac} onPress={onBot} />
       <Mode p={5} t="Play online" d="Live 7-minute games against real players." tag="NEW" col={C.gold} onPress={onOnline} />
       <Mode p={3} t="Puzzles" d="A new daily puzzle, plus 223 mates in 1 and 2." col="#4f9bff" onPress={onPuzzles} />
+      {!!season && !!season.season && <Pressable onPress={onCities} accessibilityRole="button" accessibilityLabel="City vs City season" style={[S.card, { borderWidth: 1, borderColor: C.gold, flexDirection: 'row', alignItems: 'center' }]}>
+        <View style={{ flex: 1 }}><Text style={{ color: C.gold, fontWeight: '800', fontSize: 11, letterSpacing: 1 }}>CITY VS CITY · {seasonName(season.season).toUpperCase()}</Text>
+          <Text style={{ color: C.tx, fontWeight: '800', fontSize: 16, marginTop: 3 }}>{season.mine ? season.mine.city + ' is #' + season.mine.rank + ' of ' + season.total : 'Play for your city'}</Text>
+          <Text style={[S.mut, { marginTop: 2 }]}>{season.mine ? 'You added ' + (season.you | 0) + ' pts. ' : 'Add your city in Settings. '}{season.daysLeft} {season.daysLeft === 1 ? 'day' : 'days'} left.</Text></View>
+        <Text style={{ color: C.mut, fontSize: 22 }}>›</Text></Pressable>}
       {!!rows.length && <>
         <Text style={[S.label, { marginTop: 14 }]}>{scope === 'city' ? 'TOP OF ' + String(d.city).toUpperCase() : 'TOP WORLDWIDE'}</Text>
         <View style={S.card}>

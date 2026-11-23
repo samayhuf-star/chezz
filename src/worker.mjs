@@ -4,6 +4,8 @@ import newGame from '../api/new.js';
 import claim from '../api/claim.js';
 import leaderboard from '../api/leaderboard.js';
 import auth from '../api/auth.js';
+import cities from '../api/cities.js';
+import report from '../api/report.js';
 import sfFactory from './sf-factory.mjs';
 import sfWasm from './sf.wasm';
 import core from '../core/index.js';
@@ -12,7 +14,7 @@ export { Lobby, GameRoom } from './live.mjs';
 globalThis.__SF_MAKE = () => core.createDriver(core.moduleLink(sfFactory, {
   instantiateWasm(imports, done) { const inst = new WebAssembly.Instance(sfWasm, imports); done(inst, sfWasm); return inst.exports; },
 }));
-const routes = { '/api/profile': profile, '/api/new': newGame, '/api/claim': claim, '/api/leaderboard': leaderboard, '/api/auth': auth };
+const routes = { '/api/profile': profile, '/api/new': newGame, '/api/claim': claim, '/api/leaderboard': leaderboard, '/api/auth': auth, '/api/cities': cities, '/api/report': report };
 
 export default {
   async fetch(request, env) {
