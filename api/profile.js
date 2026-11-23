@@ -13,7 +13,7 @@ module.exports = L.handler('POST', async (req, res, b) => {
   if (b.name !== undefined) {
     const name = L.clean(b.name, 24), city = L.clean(b.city, 40), state = L.clean(b.state, 40), country = L.clean(b.country, 40);
     if (!name) return res.status(400).json({ error: 'Please enter a display name' });
-    if (L.badText(name + ' ' + city + ' ' + state + ' ' + country)) return res.status(400).json({ error: 'Links are not allowed in names or places' });
+    if (L.badText(name + ' ' + city + ' ' + state + ' ' + country)) return res.status(400).json({ error: 'Links or offensive words are not allowed in names or places' });
     Object.assign(doc, { name, city, state, country });
   } else if (!doc.name) return res.status(400).json({ error: 'Please enter a display name' });
   doc.updated = Date.now();

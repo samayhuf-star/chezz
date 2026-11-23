@@ -331,7 +331,9 @@ function NewGame({ visible, pref, profile, pro, onClose, onStart }) {
 }
 
 function Rankings({ profile }) {
-  const [scope, setScope] = useState('world'), [rows, setRows] = useState(null), [note, setNote] = useState('');
+  const [scope, setScope] = useState('world'), [rows, setRows] = useState(null), [note, setNote] = useState(''), [blocked, setBlocked] = useState([]);
+  useEffect(() => { load('blocked', []).then(b => setBlocked(Array.isArray(b) ? b : [])); }, []);
+  const reportPlayer = r => Alert.alert('Report or block ' + r.name + '?', 'Report offensive names or places, or hide this player from your boards.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Hide player', onPress: async () => { const b = blocked.concat(r.id); setBlocked(b); await save('blocked', b); } }, { text: 'Report', style: 'destructive', onPress: () => Linking.openURL('mailto:samayhuf@gmail.com?subject=' + encodeURIComponent('Chezz report: ' + r.name) + '&body=' + encodeURIComponent('Player ID: ' + r.id + '\nName: ' + r.name + '\nReason: ')) }]);
   useEffect(() => { (async () => {
     setRows(null); setNote('');
     const d = profile || {};
@@ -345,11 +347,12 @@ function Rankings({ profile }) {
     <ScrollView contentContainerStyle={{ padding: 12 }}>
       <Image source={require('./assets/art/trophy.jpg')} style={{ width: '100%', height: 150, borderRadius: 16, marginBottom: 10 }} resizeMode="cover" accessibilityLabel="Leaderboard trophy" />
       <View style={{ flexDirection: 'row', gap: 6, marginBottom: 10 }}>{[['city', 'My City'], ['state', 'My State'], ['country', 'Country'], ['world', 'Worldwide']].map(([k, l]) => <Pressable key={k} onPress={() => setScope(k)} style={[S.btn, { backgroundColor: scope === k ? C.ac : C.card }]}><Text style={[S.btnT, { color: scope === k ? '#06261c' : C.mut }]}>{l}</Text></Pressable>)}</View>
-      {rows === null ? <ActivityIndicator color={C.ac} /> : rows.map((r, i) => (
+      {rows === null ? <ActivityIndicator color={C.ac} /> : rows.filter(r => !blocked.includes(r.id)).map((r, i) => (
         <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.card, borderRadius: 12, padding: 10, marginBottom: 6, borderWidth: profile && profile.id === r.id ? 2 : 0, borderColor: C.ac }}>
           <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: i === 0 ? C.gold : i === 1 ? '#c3cad4' : i === 2 ? '#d08b52' : C.card2, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontWeight: '800', color: i < 3 ? '#222' : C.tx }}>{i + 1}</Text></View>
           <View style={{ flex: 1, marginHorizontal: 10 }}><Text style={{ color: C.tx, fontWeight: '700' }} numberOfLines={1}>{r.name}</Text><Text style={S.mut} numberOfLines={1}>{[r.city, r.state, r.country].filter(Boolean).join(', ')} · best Lv {r.best || 0}</Text></View>
           <View><Text style={{ color: C.ac, fontWeight: '800', fontSize: 17, textAlign: 'right' }}>{r.points}</Text><Text style={S.mut}>{r.w}W {r.d}D {r.l}L</Text></View>
+          {!(profile && profile.id === r.id) && <Pressable onPress={() => reportPlayer(r)} accessibilityLabel={'Report or block ' + r.name} hitSlop={8} style={{ marginLeft: 8, padding: 4 }}><Text style={{ color: C.mut, fontSize: 18 }}>⋯</Text></Pressable>}
         </View>))}
       <Text style={[S.mut, { textAlign: 'center', marginTop: 10 }]}>{note}</Text>
     </ScrollView>);
