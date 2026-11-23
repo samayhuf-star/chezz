@@ -56,6 +56,25 @@ appId: com.samayvashsht.chezz
     optional: true
 - waitForAnimationToEnd:
     timeout: 8000
+# 1.e4, 2.Nf3, 3.d4 so the board looks like a real game
+- tapOn:
+    point: "56%,51%"
+- tapOn:
+    point: "56%,40%"
+- waitForAnimationToEnd:
+    timeout: 6000
+- tapOn:
+    point: "80%,56%"
+- tapOn:
+    point: "68%,45%"
+- waitForAnimationToEnd:
+    timeout: 6000
+- tapOn:
+    point: "44%,51%"
+- tapOn:
+    point: "44%,40%"
+- waitForAnimationToEnd:
+    timeout: 6000
 - tapOn:
     text: "zz-board"
     optional: true

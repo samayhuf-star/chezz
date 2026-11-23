@@ -14,11 +14,12 @@ BG_TOP, BG_BOTTOM = (22, 24, 29), (14, 40, 34)
 ACCENT, TEXT, MUTED = (79, 209, 165), (245, 247, 250), (168, 178, 190)
 
 SHOTS = [
-    ("04-rankings", "Rule your city", "League tables for your city, state, country and the world"),
-    ("01-play", "50 bots. Real clocks.", "Seven minutes a side, and the bot answers in a second"),
-    ("02-pick-level", "Climb five tiers", "Beginner to Grandmaster Zero, one level at a time"),
-    ("03-puzzles", "Daily puzzles", "Keep your streak alive between league games"),
-    ("05-profile", "Your player card", "Rating, levels beaten and every game you played"),
+    ("zz-home", "Win it for your city", "A new City vs City season every month"),
+    ("zz-online", "Play real people, live", "7-minute games with matchmaking and an online rating"),
+    ("zz-board", "50 bots on Stockfish", "Real clocks, and every ranked game is re-checked"),
+    ("zz-pick-level", "Climb five tiers", "Beginner to Grandmaster Zero, one level at a time"),
+    ("zz-rankings", "Rule the league table", "City, state, country and world boards"),
+    ("zz-puzzles", "A daily puzzle", "Plus 223 mates in 1 and 2 to keep your streak"),
 ]
 
 
