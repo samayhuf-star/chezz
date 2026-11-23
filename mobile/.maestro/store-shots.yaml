@@ -1,5 +1,5 @@
 # Captures the raw App Store screenshots on an iOS Simulator build (run by .eas/workflows/store-shots.yml).
-# Screens are saved into ~/.maestro/tests so EAS uploads them with the test results.
+# Maestro keeps takeScreenshot output in a temp folder EAS does not upload, so screens are captured another way:
 # The "zz-*" optional taps never match; they make Maestro keep a debug capture of that screen as a fallback.
 appId: com.samayvashsht.chezz
 ---
@@ -12,7 +12,6 @@ appId: com.samayvashsht.chezz
     optional: true
 - waitForAnimationToEnd:
     timeout: 8000
-- takeScreenshot: /Users/expo/.maestro/tests/02-pick-level
 - tapOn:
     text: "zz-pick-level"
     optional: true
@@ -40,7 +39,6 @@ appId: com.samayvashsht.chezz
     point: "44%,40%"
 - waitForAnimationToEnd:
     timeout: 6000
-- takeScreenshot: /Users/expo/.maestro/tests/01-play
 - tapOn:
     text: "zz-play"
     optional: true
@@ -48,7 +46,6 @@ appId: com.samayvashsht.chezz
     point: "37%,92%"
 - waitForAnimationToEnd:
     timeout: 6000
-- takeScreenshot: /Users/expo/.maestro/tests/03-puzzles
 - tapOn:
     text: "zz-puzzles"
     optional: true
@@ -56,7 +53,6 @@ appId: com.samayvashsht.chezz
     point: "62%,92%"
 - waitForAnimationToEnd:
     timeout: 8000
-- takeScreenshot: /Users/expo/.maestro/tests/04-rankings
 - tapOn:
     text: "zz-rankings"
     optional: true
@@ -64,7 +60,6 @@ appId: com.samayvashsht.chezz
     point: "87%,92%"
 - waitForAnimationToEnd:
     timeout: 6000
-- takeScreenshot: /Users/expo/.maestro/tests/05-profile
 - tapOn:
     text: "zz-profile"
     optional: true
