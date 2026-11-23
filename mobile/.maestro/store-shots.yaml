@@ -1,0 +1,65 @@
+# Captures the raw App Store screenshots on an iOS Simulator build (run by .eas/workflows/store-shots.yml).
+# Maestro keeps takeScreenshot output in a temp folder EAS does not upload, so screens are captured another way:
+# The "zz-*" optional taps never match; they make Maestro keep a debug capture of that screen as a fallback.
+appId: com.samayvashsht.chezz
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd:
+    timeout: 15000
+- tapOn:
+    text: "Continue as guest"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 8000
+- tapOn:
+    text: "zz-pick-level"
+    optional: true
+- tapOn:
+    text: "Play .*Level.*"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 8000
+# 1.e4, 2.Nf3, 3.d4 so the board looks like a real game
+- tapOn:
+    point: "56%,51%"
+- tapOn:
+    point: "56%,40%"
+- waitForAnimationToEnd:
+    timeout: 6000
+- tapOn:
+    point: "80%,57%"
+- tapOn:
+    point: "68%,46%"
+- waitForAnimationToEnd:
+    timeout: 6000
+- tapOn:
+    point: "44%,51%"
+- tapOn:
+    point: "44%,40%"
+- waitForAnimationToEnd:
+    timeout: 6000
+- tapOn:
+    text: "zz-play"
+    optional: true
+- tapOn:
+    point: "37%,92%"
+- waitForAnimationToEnd:
+    timeout: 6000
+- tapOn:
+    text: "zz-puzzles"
+    optional: true
+- tapOn:
+    point: "62%,92%"
+- waitForAnimationToEnd:
+    timeout: 8000
+- tapOn:
+    text: "zz-rankings"
+    optional: true
+- tapOn:
+    point: "87%,92%"
+- waitForAnimationToEnd:
+    timeout: 6000
+- tapOn:
+    text: "zz-profile"
+    optional: true

@@ -1,0 +1,11 @@
+name: Store screenshots
+
+# Re-uses an existing iOS Simulator build (profile "simulator"). Rebuild and swap the id after UI changes.
+jobs:
+  shots:
+    name: Capture screenshots
+    type: maestro
+    params:
+      build_id: 29c275d7-a748-469a-8fb6-03d9b459134d
+      flow_path: .maestro/store-shots.yaml
+      device_identifier: iPhone 16 Pro Max

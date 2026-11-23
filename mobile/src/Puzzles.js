@@ -35,7 +35,7 @@ export default function Puzzles({ themeId, pro, openPaywall }) {
   const persist = async s => { setStats(s); await save('puzzles', s); };
   const next = () => {
     const day = dayNum(), t = stats.today.day === day ? stats.today : { day, n: 0 };
-    if (!pro && t.n >= FREE_PER_DAY) return openPaywall('Free players get ' + FREE_PER_DAY + ' extra puzzles a day. Chezz Pro unlocks unlimited puzzles.');
+    if (!pro && t.n >= FREE_PER_DAY) return openPaywall('Free players get ' + FREE_PER_DAY + ' extra puzzles a day. Chesz Pro unlocks unlimited puzzles.');
     let i = PUZZLES.findIndex((p, k) => !stats.done[k] && k !== dailyIdx()); if (i < 0) i = Math.floor(Math.random() * PUZZLES.length);
     persist({ ...stats, today: { day, n: t.n + 1 } }); open(i, false);
   };

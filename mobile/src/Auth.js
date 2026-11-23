@@ -13,7 +13,7 @@ export function AuthSheet({ visible, start = 'choose', me, onDone, onClose }) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}><ScrollView contentContainerStyle={{ padding: 18, paddingTop: Platform.OS === 'android' ? 54 : 24 }} keyboardShouldPersistTaps="handled">
         {mode === 'choose' ? (<>
-          <Text style={S.h2}>Welcome to Chezz</Text>
+          <Text style={S.h2}>Welcome to Chesz</Text>
           <Text style={[S.mut, { marginVertical: 8 }]}>Play, climb the leaderboards and keep your stats.</Text>
           <Pressable disabled={busy} style={[S.big, { marginTop: 14, opacity: busy ? .6 : 1 }]} onPress={() => run({ mode: 'guest' })}>{busy ? <ActivityIndicator color="#06261c" /> : <Text style={S.bigT}>Continue as guest</Text>}</Pressable>
           <Pressable style={S.ghost} onPress={() => setMode('in')}><Text style={S.ghostT}>Sign in with email</Text></Pressable>

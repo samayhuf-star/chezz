@@ -1,4 +1,4 @@
-# Chezz
+# Chesz (formerly Chezz)
 
 Play chess against **50 bot levels** with real clocks, and climb the city, state, country and world leaderboards.
 
