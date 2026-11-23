@@ -27,7 +27,8 @@ function verify(tok) {
 }
 const sha = s => crypto.createHash('sha256').update(String(s)).digest('hex');
 const clean = (s, max) => String(s == null ? '' : s).replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, max);
-const badText = s => /https?:|www\.|\.(com|net|org|in|io|co)\b/i.test(s);
+const BAD_WORDS = /\b(fuck|shit|bitch|cunt|dick|pussy|asshole|nigg\w*|fag\w*|rape|nazi|slut|whore|porn|sex)\w*/i;
+const badText = s => /https?:|www\.|\.(com|net|org|in|io|co)\b/i.test(s) || BAD_WORDS.test(String(s).replace(/[^a-z\s]/gi, ''));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 const validId = id => typeof id === 'string' && /^[a-f0-9]{16}$/.test(id);
 

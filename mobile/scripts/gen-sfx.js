@@ -1,4 +1,4 @@
-// Generates the original Chezz sound effects (no third-party audio). Run: node scripts/gen-sfx.js
+// Generates the original Chesz sound effects (no third-party audio). Run: node scripts/gen-sfx.js
 const fs = require('fs'), path = require('path'), R = 22050;
 let seed = 12345; const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296) * 2 - 1;
 function tone(buf, t0, dur, f, amp, decay, noise) {
