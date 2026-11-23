@@ -52,7 +52,7 @@ appId: com.samayvashsht.chezz
     text: "zz-pick-level"
     optional: true
 - tapOn:
-    text: "Play .*Level.*"
+    text: "Start ranked game"
     optional: true
 - waitForAnimationToEnd:
     timeout: 8000
