@@ -1,0 +1,43 @@
+# Captures the raw App Store screenshots on an iOS Simulator build (run by .eas/workflows/store-shots.yml).
+appId: com.samayvashsht.chezz
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd:
+    timeout: 15000
+- tapOn:
+    text: "Continue as guest"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: shots/00-first-screen
+- tapOn:
+    text: ".*New"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: shots/02-pick-level
+- tapOn:
+    text: "Play .*Level.*"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: shots/01-play
+- tapOn:
+    text: "Puzzles"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: shots/03-puzzles
+- tapOn:
+    text: "Rankings"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: shots/04-rankings
+- tapOn:
+    text: "Profile"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: shots/05-profile

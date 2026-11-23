@@ -162,7 +162,7 @@ export default function App() {
   };
   const hintNow = () => {
     const gm = game.current; if (!gm || gm.over || gm.busy || gm.G.t !== gm.human) return;
-    if (!billing.pro) return setPaywall('Hints are part of Chezz Pro.');
+    if (!billing.pro) return setPaywall('Hints are part of Chesz Pro.');
     const go = async () => { gm.token = null; gm.ranked = false; rerender(); const m = await bot.current.think(gm.moves.slice(), 40, 1); setHint([m & 127, (m >> 7) & 127]); setTimeout(() => setHint(null), 3500); };
     if (gm.ranked) Alert.alert('Use a hint?', 'Hints make this game casual: no points or leaderboard result.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Show hint', onPress: go }]); else go();
   };
@@ -173,11 +173,11 @@ export default function App() {
     if (E.botAcceptsDraw(gm.G, gm.level, gm.moves.length)) finish(gm, 'd', 'Draw agreed', 'draw'); else { Alert.alert('Draw offer', NAMES[gm.level - 1] + ' declines the draw.'); persist(); }
   };
   const newGameBtn = () => { const gm = game.current; if (gm && !gm.over && gm.moves.length >= 2) Alert.alert('Leave this game?', 'Starting a new game counts as abandoning this one (no points, no result).', [{ text: 'Keep playing', style: 'cancel' }, { text: 'Leave game', style: 'destructive', onPress: () => { gm.over = { r: 'd', why: 'Abandoned', end: 'abort' }; save('game', null); setModal('new'); } }]); else setModal('new'); };
-  const pgn = () => { const gm = game.current, res = gm.over ? (gm.over.r === 'd' ? '1/2-1/2' : ((gm.over.r === 'w') === (gm.human === 1) ? (gm.human === 1 ? '1-0' : '0-1') : (gm.human === 1 ? '0-1' : '1-0'))) : '*'; let h = '[Event "Chezz vs ' + NAMES[gm.level - 1] + ' (Level ' + gm.level + ')"]\n[Result "' + res + '"]\n\n'; gm.sans.forEach((s, i) => { if (i % 2 === 0) h += (i / 2 + 1) + '. '; h += s + ' '; }); return h + res; };
+  const pgn = () => { const gm = game.current, res = gm.over ? (gm.over.r === 'd' ? '1/2-1/2' : ((gm.over.r === 'w') === (gm.human === 1) ? (gm.human === 1 ? '1-0' : '0-1') : (gm.human === 1 ? '0-1' : '1-0'))) : '*'; let h = '[Event "Chesz vs ' + NAMES[gm.level - 1] + ' (Level ' + gm.level + ')"]\n[Result "' + res + '"]\n\n'; gm.sans.forEach((s, i) => { if (i % 2 === 0) h += (i / 2 + 1) + '. '; h += s + ' '; }); return h + res; };
 
   /* ---------- starting a new game (with the paywall gate) ---------- */
   const begin = async p => {
-    if (p.level > FREE_LEVELS && !billing.pro) return setPaywall('Levels ' + (FREE_LEVELS + 1) + '–50 are part of Chezz Pro.');
+    if (p.level > FREE_LEVELS && !billing.pro) return setPaywall('Levels ' + (FREE_LEVELS + 1) + '–50 are part of Chesz Pro.');
     setPref(p); save('pref', p);
     const human = p.color === 'w' ? 1 : p.color === 'b' ? -1 : Math.random() < .5 ? 1 : -1, tc = TCS[0];
     const o = { level: p.level, human, tc: { b: tc.b, i: tc.i }, g: rid(), token: null };
@@ -203,7 +203,7 @@ export default function App() {
       <StatusBar barStyle={settings.scheme === 'light' ? 'dark-content' : 'light-content'} />
       <BotWorker ref={bot} />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingTop: Platform.OS === 'android' ? 34 : 6, paddingBottom: 6 }}>
-        <Text style={{ color: C.tx, fontWeight: '800', fontSize: 19 }}>♞ Chezz</Text>
+        <Text style={{ color: C.tx, fontWeight: '800', fontSize: 19 }}>♞ Chesz</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {!!profile && !!profile.rating && <Text style={{ color: C.mut, fontWeight: '700', fontSize: 13 }}>★ {profile.rating}</Text>}
           <Text style={{ color: playStreak ? C.gold : C.mut, fontWeight: '800', fontSize: 14 }} accessibilityLabel={playStreak + ' day play streak'}>🔥 {playStreak}</Text>
@@ -232,7 +232,7 @@ export default function App() {
           </View>
           <View style={[S.card, { margin: 10, maxHeight: 74 }]}><ScrollView><Text style={{ color: C.mut, fontSize: 13, lineHeight: 20 }}>{g && g.sans.length ? g.sans.map((s, i) => (i % 2 === 0 ? (i / 2 + 1) + '. ' : '') + s + ' ').join('') : 'Moves will appear here.'}</Text></ScrollView></View>
           <Text style={[S.mut, { textAlign: 'center', marginHorizontal: 18 }]}>Win = Level × 10 points · Draw = Level × 4. Ranked results are verified by the server. Undo and Hint make a game casual.</Text>
-          {!billing.pro && <Pressable onPress={() => setPaywall('')} style={{ margin: 14, overflow: 'hidden', padding: 12, borderRadius: 14, backgroundColor: C.card, alignItems: 'center' }}><Image source={require('./assets/art/paywall.jpg')} style={{ width: '100%', height: 120, borderRadius: 10, marginBottom: 8 }} resizeMode="cover" /><Text style={{ color: C.gold, fontWeight: '800' }}>👑 Unlock Levels 11–50 with Chezz Pro</Text></Pressable>}
+          {!billing.pro && <Pressable onPress={() => setPaywall('')} style={{ margin: 14, overflow: 'hidden', padding: 12, borderRadius: 14, backgroundColor: C.card, alignItems: 'center' }}><Image source={require('./assets/art/paywall.jpg')} style={{ width: '100%', height: 120, borderRadius: 10, marginBottom: 8 }} resizeMode="cover" /><Text style={{ color: C.gold, fontWeight: '800' }}>👑 Unlock Levels 11–50 with Chesz Pro</Text></Pressable>}
         </ScrollView>)}
 
       {tab === 'puzzles' && <Puzzles themeId={settings.theme} pro={billing.pro} openPaywall={setPaywall} />}
@@ -333,7 +333,7 @@ function NewGame({ visible, pref, profile, pro, onClose, onStart }) {
 function Rankings({ profile }) {
   const [scope, setScope] = useState('world'), [rows, setRows] = useState(null), [note, setNote] = useState(''), [blocked, setBlocked] = useState([]);
   useEffect(() => { load('blocked', []).then(b => setBlocked(Array.isArray(b) ? b : [])); }, []);
-  const reportPlayer = r => Alert.alert('Report or block ' + r.name + '?', 'Report offensive names or places, or hide this player from your boards.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Hide player', onPress: async () => { const b = blocked.concat(r.id); setBlocked(b); await save('blocked', b); } }, { text: 'Report', style: 'destructive', onPress: () => Linking.openURL('mailto:samayhuf@gmail.com?subject=' + encodeURIComponent('Chezz report: ' + r.name) + '&body=' + encodeURIComponent('Player ID: ' + r.id + '\nName: ' + r.name + '\nReason: ')) }]);
+  const reportPlayer = r => Alert.alert('Report or block ' + r.name + '?', 'Report offensive names or places, or hide this player from your boards.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Hide player', onPress: async () => { const b = blocked.concat(r.id); setBlocked(b); await save('blocked', b); } }, { text: 'Report', style: 'destructive', onPress: () => Linking.openURL('mailto:samayhuf@gmail.com?subject=' + encodeURIComponent('Chesz report: ' + r.name) + '&body=' + encodeURIComponent('Player ID: ' + r.id + '\nName: ' + r.name + '\nReason: ')) }]);
   useEffect(() => { (async () => {
     setRows(null); setNote('');
     const d = profile || {};
@@ -375,7 +375,7 @@ function Profile({ settings, applySettings, lastGame, openReview, profile, me, s
     <ScrollView contentContainerStyle={{ padding: 12 }} keyboardShouldPersistTaps="handled">
       <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16, marginBottom: 8 }}>Your player card</Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>{[['rating', 'Rating'], ['points', 'Points'], ['w', 'Wins'], ['d', 'Draws'], ['l', 'Losses']].map(([k, l]) => <View key={k} style={{ flex: 1, backgroundColor: C.card2, borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}><Text style={{ color: C.tx, fontSize: 20, fontWeight: '800' }}>{k === 'rating' ? ((d.rating | 0) || 800) : d[k] | 0}</Text><Text style={S.mut}>{l}</Text></View>)}</View></View>
-      <Pressable onPress={openPaywall} style={[S.card, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}><Text style={{ color: pro ? C.ac : C.gold, fontWeight: '800' }}>{pro ? '👑 Chezz Pro is active' : '👑 Get Chezz Pro – unlock Levels 11–50'}</Text>{!pro && <Text style={{ color: C.mut }}>›</Text>}</Pressable>
+      <Pressable onPress={openPaywall} style={[S.card, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}><Text style={{ color: pro ? C.ac : C.gold, fontWeight: '800' }}>{pro ? '👑 Chesz Pro is active' : '👑 Get Chesz Pro – unlock Levels 11–50'}</Text>{!pro && <Text style={{ color: C.mut }}>›</Text>}</Pressable>
       <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16, marginBottom: 8 }}>Settings</Text>
         {[['sound', 'Sound effects'], ['haptics', 'Haptic feedback']].map(([k, l]) => (
           <Pressable key={k} onPress={() => applySettings({ ...settings, [k]: !settings[k] })} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 }}>
@@ -404,7 +404,7 @@ function Profile({ settings, applySettings, lastGame, openReview, profile, me, s
       <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16, marginBottom: 8 }}>Levels beaten</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>{Array.from({ length: 50 }, (_, i) => i + 1).map(l => { const b = (d.beaten || []).indexOf(l) >= 0; return <View key={l} style={{ width: '9.2%', paddingVertical: 5, borderRadius: 8, alignItems: 'center', backgroundColor: b ? '#233a34' : C.card2, opacity: b ? 1 : .55 }}><Text style={{ color: b ? C.ac : C.tx, fontWeight: '800', fontSize: 12 }}>{l}</Text></View>; })}</View></View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 14, marginTop: 6 }}>
-        <Pressable onPress={() => restore().then(r => Alert.alert(r.ok ? 'Restored' : 'Nothing to restore', r.ok ? 'Chezz Pro is active.' : r.error || 'No purchases were found for this account.'))}><Text style={{ color: C.ac, fontWeight: '700' }}>Restore Purchases</Text></Pressable>
+        <Pressable onPress={() => restore().then(r => Alert.alert(r.ok ? 'Restored' : 'Nothing to restore', r.ok ? 'Chesz Pro is active.' : r.error || 'No purchases were found for this account.'))}><Text style={{ color: C.ac, fontWeight: '700' }}>Restore Purchases</Text></Pressable>
         <Pressable onPress={() => Linking.openURL(TERMS_URL)}><Text style={S.mut}>Terms of Use (EULA)</Text></Pressable>
         <Pressable onPress={() => Linking.openURL(PRIVACY_URL)}><Text style={S.mut}>Privacy Policy</Text></Pressable>
         <Pressable onPress={() => Linking.openURL(SUPPORT_URL)}><Text style={S.mut}>Support</Text></Pressable>

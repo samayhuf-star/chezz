@@ -415,7 +415,7 @@ function updateEnd(j){
 }
 function pgn(){
   var s=S,res=s.over?(s.over.r==='d'?'1/2-1/2':((s.over.r==='w')===(s.human===1)?(s.human===1?'1-0':'0-1'):(s.human===1?'0-1':'1-0'))):'*';
-  var h='[Event "Chezz vs '+botName(s.level)+' (Level '+s.level+')"]\n[Site "Chezz"]\n[Date "'+new Date().toISOString().slice(0,10).replace(/-/g,'.')+'"]\n[White "'+(s.human===1?((me&&me.doc&&me.doc.name)||'Player'):botName(s.level))+'"]\n[Black "'+(s.human===1?botName(s.level):((me&&me.doc&&me.doc.name)||'Player'))+'"]\n[Result "'+res+'"]\n\n';
+  var h='[Event "Chesz vs '+botName(s.level)+' (Level '+s.level+')"]\n[Site "Chesz"]\n[Date "'+new Date().toISOString().slice(0,10).replace(/-/g,'.')+'"]\n[White "'+(s.human===1?((me&&me.doc&&me.doc.name)||'Player'):botName(s.level))+'"]\n[Black "'+(s.human===1?botName(s.level):((me&&me.doc&&me.doc.name)||'Player'))+'"]\n[Result "'+res+'"]\n\n';
   for(var i=0;i<s.sans.length;i++){if(i%2===0)h+=(i/2+1)+'. ';h+=s.sans[i]+' ';}
   return h+res;
 }
@@ -462,7 +462,7 @@ function setMe(j){me={id:j.id,secret:j.secret||(me&&me.secret),doc:j.doc};ls(KEY
 function authModal(after,mode){
   mode=mode||'choose';var h='';
   if(mode==='choose'){
-    h='<h2>Welcome to Chezz</h2><p>Play, climb the leaderboards and keep your stats.</p><button class="big" id="aGuest">Continue as guest</button><button class="ghost" id="aIn">Sign in with email</button><button class="ghost" id="aUp">Create account</button><div class="note" style="margin:10px 0 0">Guests are saved on this device only. Create an account any time to keep your stats and play anywhere.</div>';
+    h='<h2>Welcome to Chesz</h2><p>Play, climb the leaderboards and keep your stats.</p><button class="big" id="aGuest">Continue as guest</button><button class="ghost" id="aIn">Sign in with email</button><button class="ghost" id="aUp">Create account</button><div class="note" style="margin:10px 0 0">Guests are saved on this device only. Create an account any time to keep your stats and play anywhere.</div>';
   }else{
     var up=mode==='up';
     h='<h2>'+(up?'Create account':'Sign in')+'</h2><label for="aEmail">Email</label><input id="aEmail" type="email" autocomplete="email" placeholder="you@example.com"><label for="aPw">Password'+(up?' (8+ characters)':'')+'</label><input id="aPw" type="password" autocomplete="'+(up?'new-password':'current-password')+'"><div class="note" id="aErr" style="color:var(--bad);margin:8px 0 0"></div><button class="big" id="aGo">'+(up?'Create account':'Sign in')+'</button><button class="ghost" id="aBack">Back</button>';

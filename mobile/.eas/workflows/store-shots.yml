@@ -1,0 +1,24 @@
+name: Store screenshots
+
+jobs:
+  build_sim:
+    name: Build for iOS Simulator
+    type: build
+    params:
+      platform: ios
+      profile: simulator
+
+  shots:
+    name: Capture screenshots
+    type: maestro
+    needs: [build_sim]
+    params:
+      build_id: ${{ needs.build_sim.outputs.build_id }}
+      flow_path: .maestro/store-shots.yaml
+      device_identifier: iPhone 16 Pro Max
+    hooks:
+      after_maestro_tests:
+        - uses: eas/upload_artifact
+          with:
+            type: build-artifact
+            path: shots

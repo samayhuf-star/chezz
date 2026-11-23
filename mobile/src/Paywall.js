@@ -21,8 +21,8 @@ export default function Paywall({ visible, onClose, billing, reason }) {
       <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: 54 }}>
         <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
           <Pressable onPress={() => onClose(false)} style={{ alignSelf: 'flex-end', padding: 8 }} accessibilityLabel="Close"><Text style={{ color: C.mut, fontSize: 24 }}>✕</Text></Pressable>
-          <Image source={require('../assets/art/pro-sparkle.gif')} style={{ width: 160, height: 160, borderRadius: 24, alignSelf: 'center', marginBottom: 6 }} accessibilityLabel="Chezz Pro crown" />
-          <Text style={[S.h2, { textAlign: 'center', fontSize: 28 }]}>Chezz Pro</Text>
+          <Image source={require('../assets/art/pro-sparkle.gif')} style={{ width: 160, height: 160, borderRadius: 24, alignSelf: 'center', marginBottom: 6 }} accessibilityLabel="Chesz Pro crown" />
+          <Text style={[S.h2, { textAlign: 'center', fontSize: 28 }]}>Chesz Pro</Text>
           <Text style={[S.mut, { textAlign: 'center', marginTop: 6, marginBottom: 18 }]}>{reason || 'Take on all 50 bots, from Beginner to Grandmaster Zero.'}</Text>
           <View style={S.card}>{PERKS.map(p => <Text key={p} style={{ color: C.tx, fontSize: 15, marginVertical: 5 }}>✓  {p}</Text>)}</View>
           {loading ? <ActivityIndicator color={C.ac} style={{ margin: 20 }} /> : plans.length ? plans.map(({ pkg, plan }, i) => (
@@ -35,7 +35,7 @@ export default function Paywall({ visible, onClose, billing, reason }) {
           {!!msg && <Text style={{ color: C.bad, textAlign: 'center', marginTop: 8 }}>{msg}</Text>}
           <Pressable disabled={busy || !storeReady()} onPress={() => run(restore)} style={{ padding: 14 }} accessibilityRole="button"><Text style={{ color: C.ac, textAlign: 'center', fontWeight: '700' }}>Restore Purchases</Text></Pressable>
           <Text style={[S.mut, { fontSize: 11, lineHeight: 16, textAlign: 'center' }]}>
-            {priceLines ? priceLines + ' ' : ''}Each period of Chezz Pro includes bot levels 11–50 and unlimited hints. Payment is charged to your {store} at confirmation of purchase. The subscription renews automatically unless it is cancelled at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours before the period ends. Manage or cancel any time in your {store} account settings.
+            {priceLines ? priceLines + ' ' : ''}Each period of Chesz Pro includes bot levels 11–50 and unlimited hints. Payment is charged to your {store} at confirmation of purchase. The subscription renews automatically unless it is cancelled at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours before the period ends. Manage or cancel any time in your {store} account settings.
           </Text>
           <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 18, marginTop: 10 }}>
             <Pressable onPress={() => Linking.openURL(TERMS_URL)} accessibilityRole="link"><Text style={{ color: C.mut, textDecorationLine: 'underline', fontSize: 12 }}>Terms of Use (EULA)</Text></Pressable>

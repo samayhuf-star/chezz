@@ -11,7 +11,7 @@ export const PRODUCTS = {
   weekly: 'chezz_pro_weekly', // 1 week, US price $1.99, 7-day free trial
 };
 export const TRIAL_DAYS = 7;
-export const FREE_LEVELS = 10; // levels 1..10 are free, 11..50 need Chezz Pro
+export const FREE_LEVELS = 10; // levels 1..10 are free, 11..50 need Chesz Pro
 export const PRIVACY_URL = process.env.EXPO_PUBLIC_PRIVACY_URL || 'https://chezz.samayhuf.workers.dev/privacy.html';
 export const TERMS_URL = process.env.EXPO_PUBLIC_TERMS_URL || 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
 export const SUPPORT_URL = 'https://chezz.samayhuf.workers.dev/support.html';

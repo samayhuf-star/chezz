@@ -1,4 +1,4 @@
-// Pure helpers for the Chezz Pro paywall. Prices always come from the store
+// Pure helpers for the Chesz Pro paywall. Prices always come from the store
 // product (priceString). A package with no price or no period is omitted so
 // the paywall never offers a plan it cannot describe.
 
@@ -40,7 +40,7 @@ export function describePlan(pkg, products) {
   }
   const price = product.priceString;
   if (!length || !price) return null;
-  const title = length === '1 week' ? 'Chezz Pro Weekly' : length === '1 year' ? 'Chezz Pro Yearly' : length === '1 month' ? 'Chezz Pro Monthly' : 'Chezz Pro (' + length + ')';
+  const title = length === '1 week' ? 'Chesz Pro Weekly' : length === '1 year' ? 'Chesz Pro Yearly' : length === '1 month' ? 'Chesz Pro Monthly' : 'Chesz Pro (' + length + ')';
   return { title, length, price, trial: trialDays(product), key: (pkg && pkg.identifier) || id };
 }
 
