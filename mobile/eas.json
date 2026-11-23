@@ -18,7 +18,8 @@
       "environment": "preview",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://chezz.samayhuf.workers.dev",
-        "EXPO_PUBLIC_PRIVACY_URL": "https://chezz.samayhuf.workers.dev/privacy.html"
+        "EXPO_PUBLIC_PRIVACY_URL": "https://chezz.samayhuf.workers.dev/privacy.html",
+        "EXPO_PUBLIC_RC_IOS_KEY": "appl_PAEHdTfjUxMCxRAMFkRrCCwFeWn"
       }
     },
     "production": {
@@ -26,7 +27,8 @@
       "environment": "production",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://chezz.samayhuf.workers.dev",
-        "EXPO_PUBLIC_PRIVACY_URL": "https://chezz.samayhuf.workers.dev/privacy.html"
+        "EXPO_PUBLIC_PRIVACY_URL": "https://chezz.samayhuf.workers.dev/privacy.html",
+        "EXPO_PUBLIC_RC_IOS_KEY": "appl_PAEHdTfjUxMCxRAMFkRrCCwFeWn"
       }
     }
   },
