@@ -59,4 +59,4 @@ Bot levels 1–10 and 5 live games a day are free. Chesz Pro unlocks levels 11�
 | chezz_pro_lifetime | Non-consumable | $39.99 | none |
 All four attach to the RevenueCat entitlement `pro` and to the **default** offering (WEEKLY, MONTHLY, ANNUAL, LIFETIME packages).
 
-**Screenshots:** `store/screenshots/` (6.9-inch, 1320×2868, captured on an iOS Simulator build of this branch, then framed with captions by `scripts/frame-shots.py`).
+**Screenshots:** `store/screenshots/` (six 6.9-inch images, 1320×2868, captured on an iOS Simulator build of the rebuilt app by `.eas/workflows/store-shots.yml`, then framed with captions by `scripts/frame-shots.py`). The paywall capture used as the in-app purchase review screenshot comes from the same run.
