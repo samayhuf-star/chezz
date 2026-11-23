@@ -1,4 +1,6 @@
 # Captures the raw App Store screenshots on an iOS Simulator build (run by .eas/workflows/store-shots.yml).
+# Screens are saved into ~/.maestro/tests so EAS uploads them with the test results.
+# The "zz-*" optional taps never match; they make Maestro keep a debug capture of that screen as a fallback.
 appId: com.samayvashsht.chezz
 ---
 - launchApp:
@@ -10,34 +12,59 @@ appId: com.samayvashsht.chezz
     optional: true
 - waitForAnimationToEnd:
     timeout: 8000
-- takeScreenshot: shots/00-first-screen
+- takeScreenshot: /Users/expo/.maestro/tests/02-pick-level
 - tapOn:
-    text: ".*New"
+    text: "zz-pick-level"
     optional: true
-- waitForAnimationToEnd:
-    timeout: 5000
-- takeScreenshot: shots/02-pick-level
 - tapOn:
     text: "Play .*Level.*"
     optional: true
 - waitForAnimationToEnd:
     timeout: 8000
-- takeScreenshot: shots/01-play
+# 1.e4, 2.Nf3, 3.d4 so the board looks like a real game
 - tapOn:
-    text: "Puzzles"
-    optional: true
+    point: "56%,51%"
+- tapOn:
+    point: "56%,40%"
 - waitForAnimationToEnd:
-    timeout: 5000
-- takeScreenshot: shots/03-puzzles
+    timeout: 6000
 - tapOn:
-    text: "Rankings"
+    point: "80%,57%"
+- tapOn:
+    point: "68%,46%"
+- waitForAnimationToEnd:
+    timeout: 6000
+- tapOn:
+    point: "44%,51%"
+- tapOn:
+    point: "44%,40%"
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: /Users/expo/.maestro/tests/01-play
+- tapOn:
+    text: "zz-play"
     optional: true
+- tapOn:
+    point: "37%,92%"
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: /Users/expo/.maestro/tests/03-puzzles
+- tapOn:
+    text: "zz-puzzles"
+    optional: true
+- tapOn:
+    point: "62%,92%"
 - waitForAnimationToEnd:
     timeout: 8000
-- takeScreenshot: shots/04-rankings
+- takeScreenshot: /Users/expo/.maestro/tests/04-rankings
 - tapOn:
-    text: "Profile"
+    text: "zz-rankings"
     optional: true
+- tapOn:
+    point: "87%,92%"
 - waitForAnimationToEnd:
-    timeout: 5000
-- takeScreenshot: shots/05-profile
+    timeout: 6000
+- takeScreenshot: /Users/expo/.maestro/tests/05-profile
+- tapOn:
+    text: "zz-profile"
+    optional: true
