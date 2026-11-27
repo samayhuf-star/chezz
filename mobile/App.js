@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Image, View, Text, Pressable, ScrollView, Modal, TextInput, Alert, AppState, SafeAreaView, Share, StatusBar, ActivityIndicator, Platform, Linking } from 'react-native';
+import { AccessibilityInfo, Image, Switch, View, Text, Pressable, ScrollView, Modal, TextInput, Alert, AppState, SafeAreaView, Share, StatusBar, ActivityIndicator, Platform, Linking } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import * as SplashScreen from 'expo-splash-screen';
 import * as E from './src/engine';
 import Board from './src/Board';
 import BotWorker from './src/BotWorker';
 import Paywall from './src/Paywall';
+import Onboarding from './src/Onboarding';
+import { initPush, getPushConsent, setPushConsent } from './src/push';
 import { usePro } from './src/purchases';
 import { api, apiEnabled } from './src/api';
 import { load, save, loadSecret, saveSecret } from './src/storage';
@@ -31,6 +33,7 @@ export default function App() {
   const [resume, setResume] = useState(null), [armed, setArmed] = useState(false), [rv, setRv] = useState(null), [auth, setAuth] = useState(null);
   const billing = usePro();
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [onboard, setOnboard] = useState(false), afterOnboard = useRef(null);
 
   /* ---------- boot ---------- */
   // Hide the splash as soon as the UI is mounted. Never wait on StoreKit.
@@ -44,8 +47,11 @@ export default function App() {
     const p = await load('pref'); if (p) setPref(p);
     const doc = await load('me'), secret = await loadSecret();
     if (doc && secret) { me.current = { id: doc.id, secret, doc }; setProfile(doc); }
-    const g = await load('game'); if (g && g.moves && g.moves.length >= 2) setResume(g); else if (doc && secret) setModal('new'); else setAuth('choose');
+    const g = await load('game');
+    const next = () => { if (g && g.moves && g.moves.length >= 2) setResume(g); else if (doc && secret) setModal('new'); else setAuth('choose'); };
     retryPending();
+    initPush();
+    if (await load('onboarded')) next(); else { afterOnboard.current = next; setOnboard(true); }
   })(); }, []);
   useEffect(() => { const sub = AppState.addEventListener('change', s => { if (s !== 'active') persist(); else retryPending(); }); return () => sub.remove(); }, []);
   useEffect(() => { const t = setInterval(() => { const g = game.current; if (g && !g.over && g.running) { checkFlag(); rerender(); } }, 100); return () => clearInterval(t); }, []);
@@ -122,6 +128,13 @@ export default function App() {
   };
   const removePending = async tok => { const p = ((await load('pending', [])) || []).filter(x => x.token !== tok); await save('pending', p.length ? p : null); };
   const retryPending = async () => { const p = (await load('pending', [])) || []; for (const c of p) await sendClaim(c, false); };
+  const runAfterOnboard = () => { const f = afterOnboard.current; afterOnboard.current = null; if (f) setTimeout(f, 400); };
+  const finishOnboarding = async r => {
+    const p = { ...pref, level: r.level, tier: 0 }; setPref(p); save('pref', p); save('onboarded', { at: Date.now(), goal: r.goal });
+    setOnboard(false);
+    if (r.push) setPushConsent(true);
+    if (r.wantPro) setTimeout(() => setPaywall(''), 400); else runAfterOnboard();
+  };
   const onAuthed = async j => { me.current = { id: j.id, secret: j.secret, doc: j.doc }; await saveSecret(j.secret); await saveDoc(j.doc); const had = auth; setAuth(null); if (had === 'choose' || had === 'in') setModal('new'); };
   const signOut = () => Alert.alert('Sign out?', profile && !profile.email ? 'You are a guest – signing out will lose this guest account and its stats. Create an account first to keep them.' : 'You can sign back in any time with your email and password.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Sign out', style: 'destructive', onPress: async () => { game.current = null; await save('game', null); await save('me', null); await saveSecret(''); me.current = null; setProfile(null); rerender(); setAuth('choose'); } }]);
   const deleteAcct = () => Alert.alert('Delete account?', 'This permanently deletes your account, stats and leaderboard entry. It cannot be undone.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete forever', style: 'destructive', onPress: async () => { try { await api('auth', { mode: 'delete', id: me.current.id, secret: me.current.secret }); game.current = null; await save('game', null); await save('me', null); await saveSecret(''); me.current = null; setProfile(null); rerender(); setAuth('choose'); } catch (e) { Alert.alert('Could not delete', e.message); } } }]);
@@ -259,7 +272,8 @@ export default function App() {
             <Pressable style={S.ghost} onPress={() => setModal(null)}><Text style={S.ghostT}>Cancel</Text></Pressable>
           </View></View>
       </Modal>
-      <Paywall visible={paywall !== null} reason={paywall} billing={billing} reduceMotion={reduceMotion} onClose={ok => setPaywall(null)} />
+      <Onboarding visible={onboard} reduceMotion={reduceMotion} onDone={finishOnboarding} />
+      <Paywall visible={paywall !== null} reason={paywall} billing={billing} reduceMotion={reduceMotion} onClose={ok => { setPaywall(null); runAfterOnboard(); }} />
     </SafeAreaView>
   );
 }
@@ -344,6 +358,8 @@ function Rankings({ profile }) {
 function Profile({ profile, me, setProfile, saveDoc, openAuth, signOut, deleteAcct, pro, openPaywall, restore }) {
   const d = profile || { points: 0, w: 0, l: 0, d: 0, beaten: [] };
   const [f, setF] = useState({ name: d.name || '', city: d.city || '', state: d.state || '', country: d.country || '' }), [msg, setMsg] = useState('');
+  const [push, setPush] = useState(false);
+  useEffect(() => { getPushConsent().then(setPush); }, []);
   useEffect(() => { setF({ name: d.name || '', city: d.city || '', state: d.state || '', country: d.country || '' }); }, [profile && profile.id]);
   const saveP = async () => {
     setMsg('Saving…');
@@ -360,6 +376,7 @@ function Profile({ profile, me, setProfile, saveDoc, openAuth, signOut, deleteAc
         <View style={{ flexDirection: 'row', gap: 8 }}>{[['points', 'Points'], ['w', 'Wins'], ['d', 'Draws'], ['l', 'Losses']].map(([k, l]) => <View key={k} style={{ flex: 1, backgroundColor: C.card2, borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}><Text style={{ color: C.tx, fontSize: 20, fontWeight: '800' }}>{d[k] | 0}</Text><Text style={S.mut}>{l}</Text></View>)}</View></View>
       <Pressable onPress={openPaywall} style={[S.card, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}><Text style={{ color: pro ? C.ac : C.gold, fontWeight: '800' }}>{pro ? '👑 Chezz Pro is active' : '👑 Get Chezz Pro – unlock Levels 11–50'}</Text>{!pro && <Text style={{ color: C.mut }}>›</Text>}</Pressable>
       <PerfCard d={profile} />
+      <View style={[S.card, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}><View style={{ flex: 1 }}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16 }}>Game reminders</Text><Text style={S.mut}>Occasional push reminders and news.</Text></View><Switch value={push} onValueChange={v => { setPush(v); setPushConsent(v); }} trackColor={{ true: C.ac }} accessibilityLabel="Game reminders" /></View>
       <View style={S.card}><Text style={{ color: C.tx, fontWeight: '800', fontSize: 16 }}>{!profile ? 'Account' : profile.email ? 'Account' : 'Guest account'}</Text>
         <Text style={[S.mut, { marginTop: 4 }]}>{!profile ? 'You are not signed in.' : profile.email ? 'Signed in as ' + profile.email : 'Your stats live on this device only. Add an email and password to keep them and sign in anywhere.'}</Text>
         {profile && !profile.email && <Pressable style={[S.big, { marginTop: 10 }]} onPress={() => openAuth('up')}><Text style={S.bigT}>Create account</Text></Pressable>}

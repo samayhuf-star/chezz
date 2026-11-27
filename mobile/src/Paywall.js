@@ -32,7 +32,7 @@ export default function Paywall({ visible, onClose, billing, reason, reduceMotio
     else if (r.error) setMsg(r.error);
   };
   const store = Platform.OS === 'ios' ? 'Apple ID' : 'Google Play';
-  const period = (plan) => (plan.kind === 'yearly' ? 'year' : 'month');
+  const priceLine = (plan) => (plan.period ? `${plan.label} · ${plan.price} / ${plan.period}` : `${plan.label} · ${plan.price} once`);
   return (
     <Modal visible={visible} animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={() => onClose(false)}>
       <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: 54 }}>
@@ -44,16 +44,17 @@ export default function Paywall({ visible, onClose, billing, reason, reduceMotio
           <View style={S.card}>{PERKS.map(p => <Text key={p} style={{ color: C.tx, fontSize: 15, marginVertical: 5 }}>✓  {p}</Text>)}</View>
           {plansLoading ? <ActivityIndicator color={C.ac} style={{ margin: 20 }} /> : plans.length ? plans.map((p, i) => (
             <Pressable key={p.id} disabled={busy} onPress={() => run(() => buy(p))} style={[i === 0 ? S.big : S.ghost, { marginBottom: 4, opacity: busy ? .6 : 1 }]}>
-              <Text style={i === 0 ? S.bigT : S.ghostT}>{p.label} · {p.price} / {period(p)}</Text>
-              {i === 0 && p.kind === 'yearly' && <Text style={{ color: '#06261c', fontSize: 12, marginTop: 2 }}>Best value</Text>}
+              <Text style={i === 0 ? S.bigT : S.ghostT}>{priceLine(p)}</Text>
+              {(p.trial || (i === 0 && p.kind === 'yearly')) && <Text style={{ color: i === 0 ? '#06261c' : C.mut, fontSize: 12, marginTop: 2 }}>{[i === 0 && p.kind === 'yearly' ? 'Best value' : null, p.trial ? `${p.trial}, then ${p.price}` : null].filter(Boolean).join(' · ')}</Text>}
+              {p.kind === 'lifetime' && <Text style={{ color: C.mut, fontSize: 12, marginTop: 2 }}>One-time purchase, no renewal</Text>}
             </Pressable>
           )) : <View style={S.card}><Text style={S.mut}>{plansError || 'Prices will appear here when the store is ready.'}</Text></View>}
           {!!msg && <Text style={{ color: C.bad, textAlign: 'center', marginTop: 8 }}>{msg}</Text>}
           <Pressable disabled={busy} onPress={() => run(restore)} style={{ padding: 14 }}><Text style={{ color: C.ac, textAlign: 'center', fontWeight: '700' }}>Restore purchases</Text></Pressable>
           <Text style={[S.mut, { fontSize: 11, lineHeight: 16, textAlign: 'center' }]}>
             {plans.length
-              ? `Payment is charged to your ${store} at confirmation of purchase. The subscription renews automatically unless it is cancelled at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours before the period ends. Manage or cancel any time in your ${store} account settings.`
-              : 'Subscription prices come from the App Store or Google Play and will show here once they load.'}
+              ? `Payment is charged to your ${store} at confirmation of purchase. Lifetime is a one-time purchase. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours before the period ends. Manage or cancel any time in your ${store} account settings.`
+              : 'Prices come from the App Store or Google Play and will show here once they load.'}
           </Text>
           <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 18, marginTop: 10, flexWrap: 'wrap' }}>
             <Pressable onPress={() => Linking.openURL(TERMS_URL)}><Text style={{ color: C.mut, textDecorationLine: 'underline', fontSize: 12 }}>Terms of Use</Text></Pressable>

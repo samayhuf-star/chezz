@@ -1,191 +1,70 @@
+// Chezz Pro billing via RevenueCat (react-native-purchases). Offering "default", entitlement "pro".
+// Startup only configures the SDK and reads cached customer info: never restores (no Apple ID prompt).
 import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
-import {
-  currentEntitlementIOS,
-  ErrorCode,
-  fetchProducts,
-  finishTransaction,
-  getActiveSubscriptions,
-  getAvailablePurchases,
-  hasActiveSubscriptions,
-  initConnection,
-  isTransactionVerifiedIOS,
-  isUserCancelledError,
-  purchaseErrorListener,
-  purchaseUpdatedListener,
-  requestPurchase,
-  restorePurchases as storeRestore,
-  syncIOS,
-  type ProductOrSubscription,
-  type Purchase,
-} from 'expo-iap';
-import { ALL_PRODUCT_IDS, isKnownProduct, PRODUCT_CATALOG } from './config';
+import Purchases, { PURCHASES_ERROR_CODE, type CustomerInfo, type PurchasesPackage } from 'react-native-purchases';
+import { ENTITLEMENT_ID, PRODUCT_CATALOG } from './config';
 
-export type Plan = (typeof PRODUCT_CATALOG)[number] & {
-  price: string;
-  product: ProductOrSubscription;
-};
-
+export type Plan = (typeof PRODUCT_CATALOG)[number] & { price: string; trial: string | null; pkg: string; rcPackage: PurchasesPackage };
 export type BuyResult = 'purchased' | 'cancelled' | 'pending' | 'error';
-
 export type PlansLoad = { plans: Plan[]; error: string | null };
 
-let connected = false;
-let listeners = false;
+const KEY = Platform.OS === 'ios' ? process.env.EXPO_PUBLIC_RC_IOS_KEY : process.env.EXPO_PUBLIC_RC_ANDROID_KEY;
+const UNAVAILABLE = 'Plans unavailable right now. Please try again shortly.';
+let configured = false;
 const entitlementListeners = new Set<(isPro: boolean) => void>();
-let purchaseWaiter: ((result: BuyResult) => void) | null = null;
-
-const emitPro = (isPro: boolean) => {
-  entitlementListeners.forEach((cb) => cb(isPro));
-};
 
 const logErr = (action: string, e: unknown) => {
-  const err = e as { code?: unknown; message?: string; debugMessage?: string };
-  console.log('[chezz-iap]', `${action} failed`, {
-    code: err?.code,
-    message: err?.message,
-    debugMessage: err?.debugMessage,
-  });
+  const err = e as { code?: unknown; message?: string };
+  console.log('[chezz-rc]', `${action} failed`, { code: err?.code, message: err?.message });
 };
 
-async function ensureConnected(): Promise<boolean> {
-  if (connected) return true;
+export const isPro = (info: CustomerInfo | null | undefined) => !!info?.entitlements.active[ENTITLEMENT_ID];
+const emitPro = (value: boolean) => entitlementListeners.forEach((cb) => cb(value));
+
+export function initIAP(): boolean {
+  if (configured) return true;
+  if (!KEY) return false;
   try {
-    connected = !!(await initConnection());
+    Purchases.configure({ apiKey: KEY });
+    Purchases.addCustomerInfoUpdateListener((info) => emitPro(isPro(info)));
+    configured = true;
   } catch (e) {
-    logErr('initConnection', e);
-    connected = false;
+    logErr('configure', e);
   }
-  return connected;
+  return configured;
 }
 
-async function verifyOnDevice(purchase: Purchase): Promise<boolean> {
-  if (purchase.purchaseState === 'pending') return false;
-  if ('isSuspendedAndroid' in purchase && purchase.isSuspendedAndroid) return false;
-  if (!isKnownProduct(purchase.productId)) return false;
-
-  if (Platform.OS === 'ios') {
-    try {
-      if (await isTransactionVerifiedIOS(purchase.productId)) return true;
-    } catch (e) {
-      logErr('isTransactionVerifiedIOS', e);
-    }
-    try {
-      const entitlement = await currentEntitlementIOS(purchase.productId);
-      if (entitlement) return true;
-    } catch (e) {
-      logErr('currentEntitlementIOS', e);
-    }
-    // StoreKit 2 already signed this transaction if it arrived via Transaction.updates.
-    // Do not call getAvailablePurchases or sync here — a listener firing at connect would prompt for the Apple ID.
-    return purchase.purchaseState === 'purchased' || purchase.purchaseState === 'unknown';
-  }
-
-  return purchase.purchaseState === 'purchased' || purchase.purchaseState === 'unknown';
-}
-
-async function verifyAndFinish(purchase: Purchase): Promise<boolean> {
-  if (purchase.purchaseState === 'pending') return false;
-  const ok = await verifyOnDevice(purchase);
-  if (!ok) return false;
-  try {
-    await finishTransaction({ purchase, isConsumable: false });
-  } catch (e) {
-    logErr('finishTransaction', e);
-  }
-  return true;
-}
-
-function attachListeners() {
-  if (listeners) return;
-  listeners = true;
-  purchaseUpdatedListener(async (purchase) => {
-    if (purchase.purchaseState === 'pending') {
-      purchaseWaiter?.('pending');
-      purchaseWaiter = null;
-      return;
-    }
-    const ok = await verifyAndFinish(purchase);
-    if (ok) {
-      const entitled = await refreshEntitlements();
-      emitPro(entitled);
-    }
-    purchaseWaiter?.(ok ? 'purchased' : 'error');
-    purchaseWaiter = null;
-  });
-  purchaseErrorListener((error) => {
-    logErr('purchaseError', error);
-    if (isUserCancelledError(error) || error.code === ErrorCode.UserCancelled) {
-      purchaseWaiter?.('cancelled');
-    } else if (error.code === ErrorCode.Pending || error.code === ErrorCode.DeferredPayment) {
-      purchaseWaiter?.('pending');
-    } else {
-      purchaseWaiter?.('error');
-    }
-    purchaseWaiter = null;
-  });
-}
-
-/** Connect and listen for transaction updates. Never calls AppStore.sync or restore — those prompt for the Apple ID password. */
-export async function initIAP(): Promise<boolean> {
-  attachListeners();
-  return ensureConnected();
-}
+const trialText = (p: PurchasesPackage): string | null => {
+  const intro = p.product.introPrice;
+  if (!intro || intro.price !== 0) return null;
+  const unit = intro.periodUnit.toLowerCase();
+  return `${intro.periodNumberOfUnits}-${unit} free trial`;
+};
 
 export async function loadPlans(): Promise<PlansLoad> {
-  if (!(await ensureConnected())) {
-    return { plans: [], error: 'Plans unavailable right now. Please try again shortly.' };
-  }
-  let subs: ProductOrSubscription[] = [];
+  if (!initIAP()) return { plans: [], error: UNAVAILABLE };
   try {
-    subs = (await fetchProducts({ skus: ALL_PRODUCT_IDS, type: 'subs' })) ?? [];
+    const offerings = await Purchases.getOfferings();
+    const pkgs = offerings.current?.availablePackages ?? [];
+    const plans: Plan[] = [];
+    for (const def of PRODUCT_CATALOG) {
+      const p = pkgs.find((x) => x.identifier === def.pkg);
+      if (p) plans.push({ ...def, price: p.product.priceString, trial: trialText(p), rcPackage: p });
+    }
+    return plans.length ? { plans, error: null } : { plans: [], error: UNAVAILABLE };
   } catch (e) {
-    logErr('fetchProducts subs', e);
+    logErr('getOfferings', e);
+    return { plans: [], error: UNAVAILABLE };
   }
-  const byId = new Map<string, ProductOrSubscription>();
-  for (const product of subs) {
-    if (product?.id && product.displayPrice) byId.set(product.id, product);
-  }
-  const plans: Plan[] = [];
-  for (const def of PRODUCT_CATALOG) {
-    const product = byId.get(def.id);
-    if (!product) continue;
-    plans.push({ ...def, price: product.displayPrice, product });
-  }
-  if (!plans.length) {
-    return { plans: [], error: 'Plans unavailable right now. Please try again shortly.' };
-  }
-  return { plans, error: null };
 }
 
 export async function refreshEntitlements(): Promise<boolean> {
-  if (!(await ensureConnected())) return false;
+  if (!initIAP()) return false;
   try {
-    // Current entitlements only. Do not call syncIOS, restorePurchases, or getAvailablePurchases here —
-    // those can show Apple's "Sign in to Apple Account" prompt.
-    if (Platform.OS === 'ios') {
-      for (const id of ALL_PRODUCT_IDS) {
-        try {
-          if (await currentEntitlementIOS(id)) return true;
-        } catch (e) {
-          logErr(`currentEntitlementIOS ${id}`, e);
-        }
-      }
-    }
-    try {
-      if (await hasActiveSubscriptions(ALL_PRODUCT_IDS)) return true;
-    } catch (e) {
-      logErr('hasActiveSubscriptions', e);
-    }
-    try {
-      const active = await getActiveSubscriptions(ALL_PRODUCT_IDS);
-      if (active.some((s) => s.isActive)) return true;
-    } catch (e) {
-      logErr('getActiveSubscriptions', e);
-    }
-    return false;
+    return isPro(await Purchases.getCustomerInfo());
   } catch (e) {
-    logErr('refreshEntitlements', e);
+    logErr('getCustomerInfo', e);
     return false;
   }
 }
@@ -198,63 +77,27 @@ export function onEntitlementChange(cb: (isPro: boolean) => void): () => void {
 }
 
 export async function buyPlan(plan: Plan): Promise<BuyResult> {
-  if (!(await ensureConnected())) return 'error';
-  const result = new Promise<BuyResult>((resolve) => {
-    purchaseWaiter = resolve;
-  });
+  if (!initIAP()) return 'error';
   try {
-    await requestPurchase({
-      request: {
-        apple: { sku: plan.id },
-        google: { skus: [plan.id] },
-      },
-      type: plan.type,
-    });
+    const { customerInfo } = await Purchases.purchasePackage(plan.rcPackage);
+    const ok = isPro(customerInfo);
+    emitPro(ok);
+    return ok ? 'purchased' : 'error';
   } catch (e) {
-    purchaseWaiter = null;
-    if (isUserCancelledError(e) || (e as { code?: string })?.code === ErrorCode.UserCancelled) return 'cancelled';
-    if ((e as { code?: string })?.code === ErrorCode.Pending || (e as { code?: string })?.code === ErrorCode.DeferredPayment) {
-      return 'pending';
-    }
-    logErr('requestPurchase', e);
+    const err = e as { userCancelled?: boolean; code?: string };
+    if (err?.userCancelled || err?.code === PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR) return 'cancelled';
+    if (err?.code === PURCHASES_ERROR_CODE.PAYMENT_PENDING_ERROR) return 'pending';
+    logErr('purchasePackage', e);
     return 'error';
   }
-  return result;
 }
 
+/** User-initiated only (Restore button). */
 export async function restore(): Promise<boolean> {
-  if (!(await ensureConnected())) return false;
-  if (Platform.OS === 'ios') {
-    try {
-      await syncIOS();
-    } catch (e) {
-      logErr('syncIOS restore', e);
-    }
-  }
-  try {
-    await storeRestore();
-  } catch (e) {
-    logErr('restorePurchases', e);
-  }
-  try {
-    const purchases = await getAvailablePurchases({ onlyIncludeActiveItemsIOS: false });
-    for (const purchase of purchases) {
-      if (purchase.purchaseState === 'pending') continue;
-      if (!isKnownProduct(purchase.productId)) continue;
-      try {
-        if (await verifyOnDevice(purchase)) {
-          await finishTransaction({ purchase, isConsumable: false });
-        }
-      } catch (e) {
-        logErr('restore finish', e);
-      }
-    }
-  } catch (e) {
-    logErr('restore getAvailablePurchases', e);
-  }
-  const entitled = await refreshEntitlements();
-  emitPro(entitled);
-  return entitled;
+  if (!initIAP()) return false;
+  const ok = isPro(await Purchases.restorePurchases());
+  emitPro(ok);
+  return ok;
 }
 
 /** Hook used by the app UI. Init and entitlement refresh run in the background and never block the splash. */
@@ -268,9 +111,9 @@ export function usePro() {
       if (!dead) setPro(value);
     });
     (async () => {
-      await initIAP();
+      const value = await refreshEntitlements();
       if (dead) return;
-      setPro(await refreshEntitlements());
+      setPro(value);
       setLoading(false);
     })();
     return () => {
@@ -290,7 +133,7 @@ export function usePro() {
   const doRestore = useCallback(async () => {
     try {
       const ok = await restore();
-      return ok ? { ok: true } : { ok: false };
+      return ok ? { ok: true } : { ok: false, error: 'No active Chezz Pro purchase found.' };
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : 'Restore failed' };
     }
