@@ -36,7 +36,12 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "blockedPermissions": [
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE"
+      ]
     },
     "plugins": [
       [
@@ -59,7 +64,12 @@
           "imageWidth": 200
         }
       ],
-      "expo-audio",
+      [
+        "expo-audio",
+        {
+          "enableBackgroundPlayback": false
+        }
+      ],
       "expo-asset",
       "expo-apple-authentication"
     ],
