@@ -25,7 +25,7 @@ import Online from './src/Online';
 import Onboarding from './src/Onboarding';
 import Licences from './src/Licences';
 import Rankings from './src/Rankings';
-import { initPush, pushLogin, pushLogout, pushTags, askPushOnce } from './src/push';
+import { initPush, pushLogin, pushLogout, pushTags, askPushOnce, setPushConsent } from './src/push';
 import { Piece } from './src/Board';
 
 const hap = { on: true }; // haptics switch (Profile > Settings)
@@ -287,7 +287,12 @@ export default function App() {
             <Piece p={pc} size={24} />
             <Text style={{ color: on ? C.ac : C.mut, fontWeight: '700', fontSize: 11, marginTop: 2 }}>{l}</Text></Pressable>); })}
       </View>
-      <Onboarding visible={onb} onDone={() => { save('onboarded', 1); setOnb(false); if (!me.current) setAuth('choose'); }} onPlans={() => { save('onboarded', 1); setOnb(false); setPaywall(''); }} />
+      <Onboarding visible={onb} onDone={r => {
+        save('onboarded', { at: Date.now(), goal: r.goal }); setOnb(false);
+        const p = { ...pref, level: r.level }; setPref(p); save('pref', p);
+        if (r.push) setPushConsent(true);
+        if (r.wantPro) setTimeout(() => setPaywall(''), 400); else if (!me.current) setAuth('choose');
+      }} />
       <Settings visible={set} onClose={() => setSet(false)} settings={settings} applySettings={applySettings} profile={profile} me={me} saveDoc={saveDoc} pro={billing.pro} openPaywall={() => { setSet(false); setPaywall(''); }} restore={billing.restore} openAuth={setAuth} signOut={() => { setSet(false); signOut(); }} deleteAcct={() => { setSet(false); deleteAcct(); }} openLicences={() => setLic(true)} />
       <Licences visible={lic} onClose={() => setLic(false)} />
       <Paywall visible={paywall !== null} reason={paywall} billing={billing} onClose={ok => { setPaywall(null); if (!me.current && !auth) setAuth('choose'); }} />

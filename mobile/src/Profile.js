@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, Pressable, ScrollView, TextInput, SafeAreaView, Linking, Platform } from 'react-native';
 import { api } from './api';
 import { saveSecret } from './storage';
+import { getPushConsent, setPushConsent } from './push';
 import { alert } from './alert';
 import { PerfCard } from './Auth';
 import { C, S } from './theme';
@@ -64,6 +65,8 @@ export function Settings({ visible, onClose, settings, applySettings, profile, m
   };
   const inp = (k, l, ph) => <View><Text style={S.label}>{l}</Text><TextInput style={S.input} value={f[k]} onChangeText={v => setF({ ...f, [k]: v })} placeholder={ph} placeholderTextColor={C.mut} maxLength={k === 'name' ? 24 : 40} autoCorrect={false} accessibilityLabel={l} /></View>;
   const toggle = k => applySettings({ ...settings, [k]: !settings[k] });
+  const [push, setPush] = useState(false);
+  useEffect(() => { if (visible) getPushConsent().then(v => setPush(!!v)); }, [visible]);
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}><ScrollView contentContainerStyle={{ padding: 14, paddingTop: Platform.OS === 'android' ? 44 : 14, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
@@ -71,6 +74,7 @@ export function Settings({ visible, onClose, settings, applySettings, profile, m
         <Text style={S.label}>GAME</Text>
         <View style={S.card}>
           <Line t="Sound" v={settings.sound ? 'On' : 'Off'} on={settings.sound} onPress={() => toggle('sound')} />
+          <Line t="Game reminders" v={push ? 'On' : 'Off'} on={push} onPress={() => { const v = !push; setPush(v); setPushConsent(v); }} />
           <Line t="Haptics" v={settings.haptics ? 'On' : 'Off'} on={settings.haptics} onPress={() => toggle('haptics')} />
           <Line t="Appearance" v={settings.scheme === 'light' ? 'Light' : 'Dark'} on onPress={() => applySettings({ ...settings, scheme: settings.scheme === 'light' ? 'dark' : 'light' })} />
           <Text style={S.label}>BOARD THEME</Text>
